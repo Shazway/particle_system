@@ -1,0 +1,4 @@
+.vscode/
+particle_system
+obj/
+*/*.o
