@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/16 02:26:23 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/16 23:51:04 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@
 using namespace psys;
 
 // Constants
-const size_t particle_number = 10; 
+const size_t particle_number = 1000000; 
 
 // Globals
 camera cam;
@@ -46,6 +46,7 @@ void keyPress(unsigned char key, int x, int y)
 {
 	(void)x;
 	(void)y;
+	keyStates[key] = true;
 	if (key == 27)
 		glutLeaveMainLoop();
 }
@@ -63,8 +64,49 @@ void closeCallback() {
 	exit(0);
 }
 
+void mouseCallback(int x, int y) {
+	float w_width = static_cast<float>(glutGet(GLUT_WINDOW_WIDTH));
+	float w_height = static_cast<float>(glutGet(GLUT_WINDOW_HEIGHT));
+
+	particle_sys.mousePos.x = 2.0f * static_cast<float>(x) / w_width - 1.0f;
+	particle_sys.mousePos.y = 1.0f - 2.0f * static_cast<float>(y) / w_height;
+}
+
 void renderParticles()
 {
+	cl_int err;
+	err = clEnqueueAcquireGLObjects(particle_sys.queue, 1, &particle_sys.particleBufferCL, 0, nullptr, nullptr);
+	if (err != CL_SUCCESS) {
+		std::cerr << "Failed to acquire GL objects for OpenCL: "<<err<< std::endl;
+		return ;
+	}
+	double3 pos = {-cam.center.x, -cam.center.y, cam.center.z};
+	clSetKernelArg(particle_sys.calculate_position, 0, sizeof(cl_mem), &particle_sys.particleBufferCL);
+	clSetKernelArg(particle_sys.calculate_position, 1, sizeof(double3), &pos);
+	clSetKernelArg(particle_sys.calculate_position, 2, sizeof(float), &particle_sys.deltaTime);
+	clFinish(particle_sys.queue);
+	err = clEnqueueNDRangeKernel(particle_sys.queue, particle_sys.calculate_position, 1, NULL, &particle_sys.nb_particles, NULL, 0, NULL, NULL);
+	if (err != CL_SUCCESS) {
+		std::cerr << "Failed to enqueue kernel for OpenCL: "<<err<< std::endl;
+		return ;
+	}
+	
+	err = clEnqueueReleaseGLObjects(particle_sys.queue, 1, &particle_sys.particleBufferCL, 0, nullptr, nullptr);
+	if (err != CL_SUCCESS) {
+		std::cerr << "Failed to dequeue kernel for OpenCL: "<<err<< std::endl;
+		return ;
+	}
+	//std::cout << "Render call" << std::endl;
+	clFinish(particle_sys.queue);
+
+	glBindBuffer(GL_ARRAY_BUFFER, particle_sys.particleBufferGL);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glVertexPointer(3, GL_FLOAT, sizeof(particle), 0);
+	glDrawArrays(GL_POINTS, 0, particle_sys.nb_particles);
+
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	return ;
 }
 
@@ -76,6 +118,7 @@ void display()
 	float radX;
 	float radY;
 	glMatrixMode(GL_MODELVIEW);
+
 	viewMatrix = mat4::identity();
 	radX = cam.xangle * (M_PI / 180.0);
 	radY = cam.yangle * (M_PI / 180.0);
@@ -86,7 +129,6 @@ void display()
 
 	// Draw object
 	renderParticles();
-
 	glutSwapBuffers();
 }
 
@@ -100,8 +142,14 @@ void update(int value)
 	if (keyStates['a']) cam.move(0.0, 1.0);
 	if (keyStates['s']) cam.move(-1.0, 0.0);
 	if (keyStates['d']) cam.move(0.0, -1.0);
-	if (keyStates[' ']) cam.position.y -= cam.movementspeed;
-	if (keyStates['v']) cam.position.y += cam.movementspeed;
+	if (keyStates[' ']) {
+		cam.position.y -= cam.movementspeed;
+		cam.center.y = cam.position.y;
+	}
+	if (keyStates['v']) {
+		cam.position.y += cam.movementspeed;
+		cam.center.y = cam.position.y;
+	}
 
 	// Camera rotations
 	if (specialKeyStates[GLUT_KEY_LEFT]) cam.xangle += cam.rotationspeed;
@@ -150,6 +198,7 @@ void initGlutEvents()
 	glutSpecialFunc(specialKeyPress);
 	glutSpecialUpFunc(specialKeyRelease);
 	glutCloseFunc(closeCallback);
+	glutPassiveMotionFunc(mouseCallback);
 }
 
 void initGlew()

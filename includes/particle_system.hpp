@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/16 02:22:53 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/16 22:33:39 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,6 +85,14 @@ namespace psys {
 		vec3(float x = 0.0, float y = 0.0, float z = 0.0) : x(x), y(y), z(z) {}
 	};
 
+	struct double3 {
+		float x, y, z;
+	};
+
+	struct double4 {
+		float x, y, z, w;
+	};
+
 	struct vec2 {
 		float x, y;
 
@@ -135,8 +143,8 @@ namespace psys {
 	const float movespeed = 0.1;
 
 	struct particle {
-		vec3 pos;
-		Color color;
+		double3 pos;
+		double4 color;
 		float velocity;
 	};
 
@@ -166,6 +174,7 @@ namespace psys {
 			cl_uint num_devices;
 			cl_mem particleBufferCL;
 			GLuint particleBufferGL;
-			GLuint vbo;
+			vec2 mousePos;
+			float deltaTime = 0.16;
 	};
 };

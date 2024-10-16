@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/01 20:27:33 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/13 01:39:31 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/16 21:58:10 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,8 @@ namespace psys
 		// Update the camera position
 		position.z += (forwardX + strafeX) * movementspeed;
 		position.x += (forwardZ + strafeZ) * movementspeed;
+		center.x = position.x;
+		center.z = position.z -10.0f;
 	}
 
 	void camera::reset()

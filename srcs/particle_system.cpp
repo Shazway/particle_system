@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/16 02:24:18 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/16 23:52:49 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,6 @@ namespace psys {
 		
 		// Ensure OpenGL commands are finished before proceeding
 		glFinish();
-
 		return true;
 	}
 
@@ -82,7 +81,7 @@ namespace psys {
 		calculate_position = nullptr;
 		initialize_particles = nullptr;
 		particleBufferCL = nullptr;
-		return err;
+		return !err;
 	}
 
 	bool particle_system::selectDevice() {
@@ -189,6 +188,10 @@ namespace psys {
 		// OpenCL kernel source for updating particles
 		const char *updateParticlesSrc = R"(
 			typedef struct {
+				float x, y, z;
+			} vec3;
+
+			typedef struct {
 				float x, y;
 			} vec2;
 
@@ -197,25 +200,59 @@ namespace psys {
 			} Color;
 
 			typedef struct {
-				float3 pos;
+				vec3 pos;
 				Color color;
 				float velocity;
 			} particle;
 
-			__kernel void updateParticles(__global particle *particles, float2 mousePos, float deltaTime) {
+			float length(vec3 v) {
+				return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+			}
+
+			vec3 normalize(vec3 v) {
+				float len = length(v);
+				if (len > 0.0f) {
+					v.x /= len;
+					v.y /= len;
+					v.z /= len;
+				}
+				return v;
+			}
+
+			__kernel void updateParticles(__global particle *particles, vec3 mousePos, float deltaTime) {
 				int id = get_global_id(0);
-				float3 position = particles[id].pos;
+				// if (id == 0)
+				// 	printf("Particle position: %.1f, %.1f\n", mousePos.x, mousePos.y);
+				// Retrieve the particle
+				particle p = particles[id];
 
-				float3 direction = (float3)(mousePos.x, mousePos.y, 0.0f) - position;
-				float distance = length(direction);
+				// Calculate the direction vector towards the mouse position
+				vec3 direction;
+				direction.x = mousePos.x - p.pos.x;
+				direction.y = mousePos.y - p.pos.y;
+				direction.z = mousePos.z - p.pos.z;
 
-				// Avoid division by zero
-				if (distance > 0.0f) {
-					particles[id].velocity = 0;
+				// Calculate the length of the direction vector
+				float length = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
+
+				// Normalize the direction vector to get the unit direction
+				if (length > 0.0f) {
+					if (direction.x > 0.0f)
+						direction.x /= length;
+					if (direction.y > 0.0f)
+						direction.y /= length;
+					if (direction.z > 0.0f)
+						direction.z /= length;
 				}
 
-				particles[id].pos.x += particles[id].velocity * deltaTime;
-				particles[id].pos.y += particles[id].velocity * deltaTime;
+				// Update the particle's position
+				float movement = p.velocity * deltaTime;
+				p.pos.x += direction.x * movement;
+				p.pos.y += direction.y * movement;
+				p.pos.z += direction.z * movement;
+
+				// Write the updated particle back to the global memory
+				particles[id] = p;
 			}
 		)";
 
@@ -271,23 +308,16 @@ namespace psys {
 			__kernel void init_particles(__global particle* particles) {
 				int id = get_global_id(0);
 
-				printf("init_particles_kernel::Start of init particles\n");
-				if (id == 0) {
-					printf("init_particles_kernel::Init of pos\n");
-					particles[id].pos.x = (id % 10) * 0.1f;
-					particles[id].pos.y = (id / 10) * 0.1f;
-					particles[id].pos.z = 0.0f;
+				particles[id].pos.x = (id % 10 + 0.2) * 0.1;
+				particles[id].pos.y = (id % 10 + 0.2) * 0.1;
+				particles[id].pos.z = -10.0f;
 
-					printf("init_particles_kernel::Init of Color\n");
-					particles[id].color.r = 1.0f;
-					particles[id].color.g = 0.5f;
-					particles[id].color.b = 0.2f;
-					particles[id].color.o = 1.0f;
+				particles[id].color.r = 1.0f;
+				particles[id].color.g = 0.5f;
+				particles[id].color.b = 0.2f;
+				particles[id].color.o = 1.0f;
 
-					printf("init_particles_kernel::Init of Velocity\n");
-					particles[id].velocity = 0.1f;
-				}
-				printf("init_particles_kernel::End of init particles\n");
+				particles[id].velocity = (id % 10 + 1) * 0.1f;
 			}
 		)";
 
@@ -318,7 +348,7 @@ namespace psys {
 			return freeCLdata(true, KERNEL_ARGS_SET_ERR);
 
 		// Execute the init kernel
-		size_t globalWorkSize = 1;
+		size_t globalWorkSize = nb_particles;
 		err = clEnqueueNDRangeKernel(queue, initialize_particles, 1, NULL, &globalWorkSize, NULL, 0, NULL, NULL);
 		if (err != CL_SUCCESS)
 		{
