@@ -6,13 +6,17 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/12 01:10:18 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/16 02:22:53 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
+#define CL_TARGET_OPENCL_VERSION 300
+#define CL_GL_SHARING
+
 // Useful includes
+#include <GL/glew.h>
 #include <GL/glut.h>
 #include <GL/freeglut.h>
 #include <iostream>
@@ -26,6 +30,13 @@
 #include <memory>
 #include <cmath>
 #include <algorithm>
+#include <GL/glx.h>
+#include <CL/cl.h>
+#include <CL/cl_gl.h>
+#include "error_msg.hpp"
+#include <string.h>
+#include <cstring>
+#include <stdlib.h>
 
 #define COMMANDS_LIST								\
 	"Model Commands:\n"								\
@@ -61,25 +72,34 @@
 	"'Esc': Exit program"
 
 
+
+
+
 #define W_WIDTH 800
 #define W_HEIGHT 600
 
 namespace psys {
 	struct vec3 {
-		double x, y, z;
+		float x, y, z;
 
-		vec3(double x = 0.0, double y = 0.0, double z = 0.0) : x(x), y(y), z(z) {}
+		vec3(float x = 0.0, float y = 0.0, float z = 0.0) : x(x), y(y), z(z) {}
+	};
+
+	struct vec2 {
+		float x, y;
+
+		vec2(float x = 0.0, float y = 0.0) : x(x), y(y) {}
 	};
 
 	struct Color {
 		//red, green, blue, opacity
-		double r;
-		double g;
-		double b;
-		double o;
+		float r;
+		float g;
+		float b;
+		float o;
 		Color(): r(0), g(0), b(0), o(0) {}
-		Color(double r, double g, double b, double o): r(r), g(g), b(b), o(o) {}
-		Color(double r, double g, double b): r(r), g(g), b(b), o(1) {}
+		Color(float r, float g, float b, float o): r(r), g(g), b(b), o(o) {}
+		Color(float r, float g, float b): r(r), g(g), b(b), o(1) {}
 	};
 
 	struct rgb {
@@ -112,5 +132,40 @@ namespace psys {
 		{0.5f, 0.5f, 0.5f}
 	};
 
-	const double movespeed = 0.1;
+	const float movespeed = 0.1;
+
+	struct particle {
+		vec3 pos;
+		Color color;
+		float velocity;
+	};
+
+	class particle_system {
+		public:
+			particle_system(const size_t &nbParticles);
+			~particle_system();
+
+			//Init functions
+			bool initCLdata();
+			bool initSharedBufferData();
+			bool freeCLdata(bool err, const std::string &err_msg = "");
+			bool selectDevice();
+
+			size_t nb_particles;
+			size_t particleBufferSize;
+			cl_int err;
+			cl_context context;
+			cl_command_queue queue;
+			cl_program update_program;
+			cl_program init_program;
+			cl_kernel calculate_position;
+			cl_kernel initialize_particles;
+			cl_platform_id selected_platform;
+			cl_device_id selected_device;
+			cl_uint num_platforms;
+			cl_uint num_devices;
+			cl_mem particleBufferCL;
+			GLuint particleBufferGL;
+			GLuint vbo;
+	};
 };

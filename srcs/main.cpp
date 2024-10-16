@@ -6,15 +6,19 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/12 01:11:56 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/16 02:26:23 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "particle_system.hpp"
 #include "matrix.hpp"
 #include "camera.hpp"
+#include "particle_system.hpp"
 
 using namespace psys;
+
+// Constants
+const size_t particle_number = 10; 
 
 // Globals
 camera cam;
@@ -22,9 +26,7 @@ mat4 projectionMatrix;
 mat4 viewMatrix;
 bool keyStates[256] = {false};
 bool specialKeyStates[256] = {false};
-
-// Constants
-const size_t particle_number = 1; 
+particle_system particle_sys(particle_number);
 
 void specialKeyPress(int key, int x, int y)
 {
@@ -55,6 +57,12 @@ void keyRelease(unsigned char key, int x, int y)
 	keyStates[key] = false;
 }
 
+void closeCallback() {
+	//Closing window callback to free all openCL related data
+	particle_sys.freeCLdata(false);
+	exit(0);
+}
+
 void renderParticles()
 {
 	return ;
@@ -65,8 +73,8 @@ void display()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Matrix operations
-	double radX;
-	double radY;
+	float radX;
+	float radY;
 	glMatrixMode(GL_MODELVIEW);
 	viewMatrix = mat4::identity();
 	radX = cam.xangle * (M_PI / 180.0);
@@ -74,7 +82,7 @@ void display()
 	viewMatrix *= mat4::rotate(radY, 1.0, 0.0, 0.0);
 	viewMatrix *= mat4::rotate(radX, 0.0, 1.0, 0.0);
 	viewMatrix *= mat4::translate(cam.position.x, cam.position.y, cam.position.z);
-	glLoadMatrixd((viewMatrix).data[0].data());
+	glLoadMatrixf((viewMatrix).data[0].data());
 
 	// Draw object
 	renderParticles();
@@ -118,7 +126,7 @@ void reshape(int width, int height)
 	glMatrixMode(GL_PROJECTION);
 	projectionMatrix = mat4::identity();
 	projectionMatrix *= mat4::perspective(45.0 / 180.0, (double)width / (double)height, 1.0, 100.0);
-	glLoadMatrixd((projectionMatrix).data[0].data());
+	glLoadMatrixf((projectionMatrix).data[0].data());
 }
 
 void initGlutWindow(int ac, char **av)
@@ -141,12 +149,30 @@ void initGlutEvents()
 	glutKeyboardUpFunc(keyRelease);
 	glutSpecialFunc(specialKeyPress);
 	glutSpecialUpFunc(specialKeyRelease);
+	glutCloseFunc(closeCallback);
+}
+
+void initGlew()
+{
+	GLenum err = glewInit();
+	if (err != GLEW_OK) {
+		std::cerr << "Error initializing GLEW" << glewGetErrorString(err) << std::endl;
+	}
 }
 
 int main(int argc, char **argv)
 {
+	if (particle_sys.err != CL_SUCCESS) {
+		std::cerr << "Could not initialize openCL properly" << std::endl;
+		return 1;
+	}
+
 	initGlutWindow(argc, argv);
+	initGlew();
 	initGlutEvents();
+	particle_sys.initSharedBufferData();
+	if (!particle_sys.initCLdata())
+		return 1;
 	glutMainLoop();
 	return 0;
 }

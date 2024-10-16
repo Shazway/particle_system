@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/29 19:15:49 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/12 01:04:39 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/13 01:41:02 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,7 @@ namespace psys
 			{0.0, 0.0, 0.0, 1.0}
 		}};
 	}
-	mat4::mat4(const std::array<std::array<double, 4>, 4> &cpy) : data(cpy) { }
+	mat4::mat4(const std::array<std::array<float, 4>, 4> &cpy) : data(cpy) { }
 
 	// Set as identity matrix
 	mat4 mat4::identity()
@@ -38,7 +38,7 @@ namespace psys
 		return result;
 	}
 
-	mat4 mat4::translate(double x, double y, double z)
+	mat4 mat4::translate(float x, float y, float z)
 	{
 		mat4 result;
 
@@ -48,12 +48,12 @@ namespace psys
 		return result;
 	}
 
-	mat4 mat4::rotate(double angle, double x, double y, double z)
+	mat4 mat4::rotate(float angle, float x, float y, float z)
 	{
 		mat4 result;
-		double c = cos(angle);
-		double s = sin(angle);
-		double invert_c = 1.0 - c;
+		float c = cos(angle);
+		float s = sin(angle);
+		float invert_c = 1.0 - c;
 
 		result.data[0][0] = x * x * invert_c + c;
 		result.data[1][0] = y * x * invert_c + z * s;
@@ -72,11 +72,11 @@ namespace psys
 		return result;
 	}
 
-	mat4 mat4::perspective(double fov, double aspect, double near, double far)
+	mat4 mat4::perspective(float fov, float aspect, float near, float far)
 	{
 		mat4 result;
-		double tanHalfFov = tan(fov / 2.0);
-		double range = near - far;
+		float tanHalfFov = tan(fov / 2.0);
+		float range = near - far;
 
 		result.data[0][0] = 1.0 / (aspect * tanHalfFov);
 		result.data[1][1] = 1.0 / tanHalfFov;
@@ -113,7 +113,7 @@ namespace psys
 		os << std::endl;
 		for (const auto& row : matrix.data) {
 			os << "{ ";
-			for (double value : row) {
+			for (float value : row) {
 				os << value << " ";
 			}
 			os << "}";

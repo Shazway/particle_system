@@ -1,7 +1,7 @@
 NAME		=	particle_system
 DEBUG_NAME	=	particle_systemDebug
 
-LDFLAGS =	-lGL -lGLU -lglut -lOpenCL
+LDFLAGS =	-lGL -lGLU -lglut -lOpenCL -lGLEW -lX11
 
 CFLAGS	=	-Wall -Wextra -Werror -O2 -g3
 DEBUG_CFLAGS	=	-DNDEBUG -Wall -Wextra -Werror -O2 -g3
@@ -14,7 +14,8 @@ SRC_PATH	=	srcs/
 INCLUDES	=	-Iincludes
 SRC_NAME	=	main.cpp			\
 				matrix.cpp			\
-				camera.cpp
+				camera.cpp			\
+				particle_system.cpp
 
 OBJ_NAME	=	$(SRC_NAME:.cpp=.o)
 OBJ		=	$(addprefix $(OBJ_PATH), $(OBJ_NAME))
