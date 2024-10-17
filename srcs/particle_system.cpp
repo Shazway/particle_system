@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/16 23:52:49 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/18 00:38:32 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,10 +18,17 @@ namespace psys {
 		context = nullptr;
 		queue = nullptr;
 		update_program = nullptr;
-		init_program = nullptr;
+		init_cube_program = nullptr;
 		calculate_position = nullptr;
-		initialize_particles = nullptr;
+		init_particles_cube = nullptr;
 		particleBufferCL = nullptr;
+		
+		// No mass or intensity at first
+		m.intensity = 0.0f;
+		m.radius = 5.0f;
+		m.x = 0.0f;
+		m.y = 0.0f;
+		m.z = -10.0f;
 	}
 
 	particle_system::~particle_system() {
@@ -33,10 +40,10 @@ namespace psys {
 		// Generate OpenGL buffer
 		glGenBuffers(1, &particleBufferGL);
 		glBindBuffer(GL_ARRAY_BUFFER, particleBufferGL);
-		
+
 		// Allocate space for particles in the OpenGL buffer
 		glBufferData(GL_ARRAY_BUFFER, (sizeof(particle) * nb_particles), nullptr, GL_DYNAMIC_DRAW);
-		
+
 		// Check for OpenGL errors
 		GLenum glErr = glGetError();
 		if (glErr != GL_NO_ERROR) {
@@ -46,7 +53,7 @@ namespace psys {
 
 		// Unbind the buffer to avoid accidental modification later
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		
+
 		// Ensure OpenGL commands are finished before proceeding
 		glFinish();
 		return true;
@@ -66,10 +73,10 @@ namespace psys {
 		}
 		if (calculate_position)
 			clReleaseKernel(calculate_position);
-		if (initialize_particles)
-			clReleaseKernel(initialize_particles);
-		if (init_program)
-			clReleaseProgram(init_program);
+		if (init_particles_cube)
+			clReleaseKernel(init_particles_cube);
+		if (init_cube_program)
+			clReleaseProgram(init_cube_program);
 		if (queue)
 			clReleaseCommandQueue(queue);
 		if (context)
@@ -77,9 +84,9 @@ namespace psys {
 		context = nullptr;
 		queue = nullptr;
 		update_program = nullptr;
-		init_program = nullptr;
+		init_cube_program = nullptr;
 		calculate_position = nullptr;
-		initialize_particles = nullptr;
+		init_particles_cube = nullptr;
 		particleBufferCL = nullptr;
 		return !err;
 	}
@@ -157,16 +164,44 @@ namespace psys {
 		return true;
 	}
 
-	bool particle_system::initCLdata() {
-		if (!selectDevice())
-			return false;
+	const char *particle_system::get_CL_program(const std::string& path) {
+		// Static string to hold the program content (so we can return a reference)
+		static std::string content;
 
+		// Open the file in text mode
+		std::ifstream file(path, std::ios::in);
+		if (!file.is_open()) {
+			return nullptr;
+		}
+
+		// Ensure the file is read in a valid encoding (UTF-8)
+		file.imbue(std::locale::classic());
+
+		// Read the file content into a stringstream
+		std::stringstream buffer;
+		buffer << file.rdbuf();
+		
+		// Assign the content of the buffer to the content string
+		content = buffer.str();
+
+		// Return the content
+		return content.c_str();
+	}
+
+
+	bool particle_system::initCLdata() {
+		// Select device (GPU)
+		if (!selectDevice())
+			return freeCLdata(true, DEVICE_GET_ERR);
+
+		// Context properties for CL/GL buffer sharing
 		const cl_context_properties properties[] = {
 			CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
 			CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
 			CL_CONTEXT_PLATFORM, (cl_context_properties)selected_platform,  // the OpenCL platform you are using
 			0
 		};
+
 		// Create OpenCL context
 		context = clCreateContext(properties, num_devices, &selected_device, nullptr, nullptr, &err);
 		if (err != CL_SUCCESS || !context) {
@@ -174,87 +209,23 @@ namespace psys {
 			return freeCLdata(true, CONTEXT_CREATE_ERR);
 		}
 
+		// Checking context info for errors
 		err = clGetGLContextInfoKHR(properties, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, sizeof(selected_platform), &selected_platform, nullptr);
 		if (err != CL_SUCCESS) {
 			std::cerr << "Error: Failed to get OpenCL device: " << err << std::endl;
 			return freeCLdata(true, "");
 		}
 
+		// Creating command queue
 		cl_queue_properties queue_properties[] = {0};
 		queue = clCreateCommandQueueWithProperties(context, selected_device, queue_properties, &err);
 		if (err != CL_SUCCESS || !queue)
 			return freeCLdata(true, QUEUE_CREATE_ERR);
 
 		// OpenCL kernel source for updating particles
-		const char *updateParticlesSrc = R"(
-			typedef struct {
-				float x, y, z;
-			} vec3;
-
-			typedef struct {
-				float x, y;
-			} vec2;
-
-			typedef struct {
-				float r, g, b, o;
-			} Color;
-
-			typedef struct {
-				vec3 pos;
-				Color color;
-				float velocity;
-			} particle;
-
-			float length(vec3 v) {
-				return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-			}
-
-			vec3 normalize(vec3 v) {
-				float len = length(v);
-				if (len > 0.0f) {
-					v.x /= len;
-					v.y /= len;
-					v.z /= len;
-				}
-				return v;
-			}
-
-			__kernel void updateParticles(__global particle *particles, vec3 mousePos, float deltaTime) {
-				int id = get_global_id(0);
-				// if (id == 0)
-				// 	printf("Particle position: %.1f, %.1f\n", mousePos.x, mousePos.y);
-				// Retrieve the particle
-				particle p = particles[id];
-
-				// Calculate the direction vector towards the mouse position
-				vec3 direction;
-				direction.x = mousePos.x - p.pos.x;
-				direction.y = mousePos.y - p.pos.y;
-				direction.z = mousePos.z - p.pos.z;
-
-				// Calculate the length of the direction vector
-				float length = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
-
-				// Normalize the direction vector to get the unit direction
-				if (length > 0.0f) {
-					if (direction.x > 0.0f)
-						direction.x /= length;
-					if (direction.y > 0.0f)
-						direction.y /= length;
-					if (direction.z > 0.0f)
-						direction.z /= length;
-				}
-
-				// Update the particle's position
-				float movement = p.velocity * deltaTime;
-				p.pos.x += direction.x * movement;
-				p.pos.y += direction.y * movement;
-				p.pos.z += direction.z * movement;
-
-				// Write the updated particle back to the global memory
-				particles[id] = p;
-			}
-		)";
+		const char *updateParticlesSrc = get_CL_program("kernel_srcs/update_particles.cl");
+		if (!updateParticlesSrc)
+			return freeCLdata(true, FETCH_CL_FILE_ERR);
 
 		// Create program for updating particles
 		update_program = clCreateProgramWithSource(context, 1, &updateParticlesSrc, nullptr, &err);
@@ -290,66 +261,43 @@ namespace psys {
 			return freeCLdata(true, ENQUEUE_BUFFER_CL_GL_ERR);
 
 		// OpenCL kernel source for initializing particles
-		const char *initParticlesSrc = R"(
-			typedef struct {
-				float x, y, z;
-			} vec3;
-
-			typedef struct {
-				float r, g, b, o;
-			} Color;
-
-			typedef struct {
-				vec3 pos;
-				Color color;
-				float velocity;
-			} particle;
-
-			__kernel void init_particles(__global particle* particles) {
-				int id = get_global_id(0);
-
-				particles[id].pos.x = (id % 10 + 0.2) * 0.1;
-				particles[id].pos.y = (id % 10 + 0.2) * 0.1;
-				particles[id].pos.z = -10.0f;
-
-				particles[id].color.r = 1.0f;
-				particles[id].color.g = 0.5f;
-				particles[id].color.b = 0.2f;
-				particles[id].color.o = 1.0f;
-
-				particles[id].velocity = (id % 10 + 1) * 0.1f;
-			}
-		)";
+		const char *initParticlesCubeSrc = get_CL_program("kernel_srcs/init_particles_cube.cl");
+		if (!initParticlesCubeSrc)
+			return freeCLdata(true, FETCH_CL_FILE_ERR);
 
 		// Create program for initializing particles
-		init_program = clCreateProgramWithSource(context, 1, &initParticlesSrc, nullptr, &err);
-		if (err != CL_SUCCESS || !init_program)
-			return freeCLdata(true, std::string(PROGRAM_CREATE_ERR) + " init_program");
+		init_cube_program = clCreateProgramWithSource(context, 1, &initParticlesCubeSrc, nullptr, &err);
+		if (err != CL_SUCCESS || !init_cube_program)
+			return freeCLdata(true, std::string(PROGRAM_CREATE_ERR) + " init_particles_cube");
 
 		// Build the init program
-		err = clBuildProgram(init_program, 1, &selected_device, nullptr, nullptr, nullptr);
+		err = clBuildProgram(init_cube_program, 1, &selected_device, nullptr, nullptr, nullptr);
 		if (err != CL_SUCCESS) {
 			size_t len;
 			char buffer[2048];
 			bzero(buffer, sizeof(buffer));
-			clGetProgramBuildInfo(init_program, selected_device, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+			clGetProgramBuildInfo(init_cube_program, selected_device, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
 			std::cerr << buffer << std::endl;
-			return freeCLdata(true, std::string(PROGRAM_BUILD_ERR) + " init_program");
+			return freeCLdata(true, std::string(PROGRAM_BUILD_ERR) + " init_cube_program");
 		}
 
 		// Create init particles kernel
-		initialize_particles = clCreateKernel(init_program, "init_particles", &err);
-		if (err != CL_SUCCESS || !initialize_particles)
-			return freeCLdata(true, std::string(KERNEL_CREATE_ERR) + " init_program");
+		init_particles_cube = clCreateKernel(init_cube_program, "init_particles_cube", &err);
+		if (err != CL_SUCCESS || !init_particles_cube)
+			return freeCLdata(true, std::string(KERNEL_CREATE_ERR) + " init_cube_program");
 
-		// Set kernel argument
-		err = clSetKernelArg(initialize_particles, 0, sizeof(cl_mem), &particleBufferCL);
+		// Set kernel arguments
+		err = clSetKernelArg(init_particles_cube, 0, sizeof(cl_mem), &particleBufferCL);
+		if (err != CL_SUCCESS)
+			return freeCLdata(true, KERNEL_ARGS_SET_ERR);
+		err = clSetKernelArg(init_particles_cube, 1, sizeof(unsigned int), &cubeSize);
 		if (err != CL_SUCCESS)
 			return freeCLdata(true, KERNEL_ARGS_SET_ERR);
 
+
 		// Execute the init kernel
 		size_t globalWorkSize = nb_particles;
-		err = clEnqueueNDRangeKernel(queue, initialize_particles, 1, NULL, &globalWorkSize, NULL, 0, NULL, NULL);
+		err = clEnqueueNDRangeKernel(queue, init_particles_cube, 1, NULL, &globalWorkSize, NULL, 0, NULL, NULL);
 		if (err != CL_SUCCESS)
 		{
 			std::cout << "Error code: " << err << std::endl;

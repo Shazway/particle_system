@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/14 00:57:01 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/15 23:18:59 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/18 00:41:56 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 #define PLATFORM_ID_ERR "Couldn't get platform IDs"
 #define PLATFORM_GET_ERR "Couldn't get any platforms"
 #define DEVICE_ID_ERR "Couldn't get any device IDs"
-#define DEVICE_GET_ERR "Couldn't get any device"
+#define DEVICE_GET_ERR "Couldn't find any suitable devices"
 #define CONTEXT_CREATE_ERR "Couldn't create context"
 #define QUEUE_CREATE_ERR "Couldn't create queue"
 #define PROGRAM_CREATE_ERR "Couldn't create program: "
@@ -27,3 +27,4 @@
 #define ENQUEUE_NDRANGE_KERNEL_ERR "Couldn't run kernel"
 #define ENQUEUE_BUFFER_CL_GL_ERR "Failed to acquire OpenGL buffer for OpenCL"
 #define RELEASE_BUFFER_CL_GL_ERR "Failed to release OpenGL buffer for OpenCL"
+#define FETCH_CL_FILE_ERR "Failed to open .cl file"

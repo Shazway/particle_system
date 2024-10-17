@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/16 23:51:04 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/17 23:37:37 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,8 @@ void keyPress(unsigned char key, int x, int y)
 	(void)x;
 	(void)y;
 	keyStates[key] = true;
+	if (key == 'm')
+		particle_sys.m.intensity = 50.0f;
 	if (key == 27)
 		glutLeaveMainLoop();
 }
@@ -56,6 +58,8 @@ void keyRelease(unsigned char key, int x, int y)
 	(void)x;
 	(void)y;
 	keyStates[key] = false;
+	if (key == 'm')
+		particle_sys.m.intensity = 0.0f;
 }
 
 void closeCallback() {
@@ -80,10 +84,8 @@ void renderParticles()
 		std::cerr << "Failed to acquire GL objects for OpenCL: "<<err<< std::endl;
 		return ;
 	}
-	double3 pos = {-cam.center.x, -cam.center.y, cam.center.z};
 	clSetKernelArg(particle_sys.calculate_position, 0, sizeof(cl_mem), &particle_sys.particleBufferCL);
-	clSetKernelArg(particle_sys.calculate_position, 1, sizeof(double3), &pos);
-	clSetKernelArg(particle_sys.calculate_position, 2, sizeof(float), &particle_sys.deltaTime);
+	clSetKernelArg(particle_sys.calculate_position, 1, sizeof(mass), &particle_sys.m);
 	clFinish(particle_sys.queue);
 	err = clEnqueueNDRangeKernel(particle_sys.queue, particle_sys.calculate_position, 1, NULL, &particle_sys.nb_particles, NULL, 0, NULL, NULL);
 	if (err != CL_SUCCESS) {

@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/16 22:33:39 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/18 00:17:35 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,8 +89,10 @@ namespace psys {
 		float x, y, z;
 	};
 
-	struct double4 {
-		float x, y, z, w;
+	struct mass {
+		float x, y, z;
+		float intensity;
+		float radius;
 	};
 
 	struct vec2 {
@@ -140,12 +142,12 @@ namespace psys {
 		{0.5f, 0.5f, 0.5f}
 	};
 
-	const float movespeed = 0.1;
+	const float movespeed = 0.1f;
+	const unsigned int cubeSize = 5;
 
 	struct particle {
 		double3 pos;
-		double4 color;
-		float velocity;
+		double3 velocity;
 	};
 
 	class particle_system {
@@ -157,17 +159,19 @@ namespace psys {
 			bool initCLdata();
 			bool initSharedBufferData();
 			bool freeCLdata(bool err, const std::string &err_msg = "");
+			const char *get_CL_program(const std::string &path);
 			bool selectDevice();
 
+			cl_int err;
 			size_t nb_particles;
 			size_t particleBufferSize;
-			cl_int err;
 			cl_context context;
 			cl_command_queue queue;
 			cl_program update_program;
-			cl_program init_program;
+			cl_program init_cube_program;
 			cl_kernel calculate_position;
-			cl_kernel initialize_particles;
+			cl_kernel init_particles_cube;
+			cl_kernel init_particles_sphere;
 			cl_platform_id selected_platform;
 			cl_device_id selected_device;
 			cl_uint num_platforms;
@@ -175,6 +179,6 @@ namespace psys {
 			cl_mem particleBufferCL;
 			GLuint particleBufferGL;
 			vec2 mousePos;
-			float deltaTime = 0.16;
+			mass m;
 	};
 };
