@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/14 00:57:01 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/18 00:41:56 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/18 20:25:35 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,10 +21,10 @@
 #define PROGRAM_CREATE_ERR "Couldn't create program: "
 #define PROGRAM_BUILD_ERR "Couldn't build program: "
 #define KERNEL_CREATE_ERR "Couldn't create kernel: "
-#define NO_PARTICLES "0 particles entered"
 #define BUFFER_CREATE_ERR "Couldn't create interoperable buffer"
 #define KERNEL_ARGS_SET_ERR "Couldn't set args for kernel"
 #define ENQUEUE_NDRANGE_KERNEL_ERR "Couldn't run kernel"
 #define ENQUEUE_BUFFER_CL_GL_ERR "Failed to acquire OpenGL buffer for OpenCL"
 #define RELEASE_BUFFER_CL_GL_ERR "Failed to release OpenGL buffer for OpenCL"
 #define FETCH_CL_FILE_ERR "Failed to open .cl file"
+#define NO_PARTICLES_ERR "0 particles detected, at least 1 required"

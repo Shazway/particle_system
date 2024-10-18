@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/18 00:17:35 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/18 20:21:20 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -157,10 +157,22 @@ namespace psys {
 
 			//Init functions
 			bool initCLdata();
+			bool initContext();
+			bool initQueue();
+			bool initPrograms();
+			bool initKernels();
 			bool initSharedBufferData();
-			bool freeCLdata(bool err, const std::string &err_msg = "");
 			const char *get_CL_program(const std::string &path);
 			bool selectDevice();
+
+			//Runtime functions
+			cl_event enqueueUpdateParticles();
+			bool enqueueInitCubeParticles();
+			bool enqueueInitSphereParticles();
+			void resetSimulation();
+
+			//Exit functions
+			bool freeCLdata(bool err, const std::string &err_msg = "");
 
 			cl_int err;
 			size_t nb_particles;
@@ -179,6 +191,7 @@ namespace psys {
 			cl_mem particleBufferCL;
 			GLuint particleBufferGL;
 			vec2 mousePos;
+			bool resetSim;
 			mass m;
 	};
 };
