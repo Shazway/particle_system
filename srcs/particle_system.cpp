@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/18 20:35:32 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/19 15:11:41 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,10 +25,10 @@ namespace psys {
 		
 		// No mass or intensity at first
 		m.intensity = 0.0f;
-		m.radius = 5.0f;
-		m.x = 0.0f;
-		m.y = 0.0f;
-		m.z = -10.0f;
+		m.radius = 10.0f;
+		m.pos.x = 5.0f;
+		m.pos.y = -20.0f;
+		m.pos.z = -10.0f;
 
 		resetSim = false;
 	}

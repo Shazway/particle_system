@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/18 20:12:27 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/20 12:41:43 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,10 +18,14 @@
 using namespace psys;
 
 // Constants
-const size_t particle_number = 3000000; 
-bool resetSim = false;
+const size_t particle_number = 1000000; 
+const float mouse_sensitivity = 0.05f;
 
 // Globals
+bool resetSim = false;
+bool ignoreMouseEvent = false;
+bool hideCursor = false;
+bool cameraToggle = false;
 camera cam;
 mat4 projectionMatrix;
 mat4 viewMatrix;
@@ -49,10 +53,14 @@ void keyPress(unsigned char key, int x, int y)
 	(void)x;
 	(void)y;
 	keyStates[key] = true;
-	if (key == 'm')
-		particle_sys.m.intensity = 50.0f;
+	if (key == 'm' && particle_sys.m.intensity)
+		particle_sys.m.intensity = 0.0f;
+	else if (key == 'm' && !particle_sys.m.intensity)
+		particle_sys.m.intensity = 25.0f;
 	if (key == '0')
 		particle_sys.resetSim = true;
+	if (key == 'c')
+		cameraToggle = !cameraToggle;
 	if (key == 27)
 		glutLeaveMainLoop();
 }
@@ -62,8 +70,6 @@ void keyRelease(unsigned char key, int x, int y)
 	(void)x;
 	(void)y;
 	keyStates[key] = false;
-	if (key == 'm')
-		particle_sys.m.intensity = 0.0f;
 }
 
 void closeCallback() {
@@ -73,21 +79,100 @@ void closeCallback() {
 }
 
 void mouseCallback(int x, int y) {
-	float w_width = static_cast<float>(glutGet(GLUT_WINDOW_WIDTH));
-	float w_height = static_cast<float>(glutGet(GLUT_WINDOW_HEIGHT));
+	static bool firstMouse = true;
+	static int lastX = 0, lastY = 0;
 
-	particle_sys.mousePos.x = 2.0f * static_cast<float>(x) / w_width - 1.0f;
-	particle_sys.mousePos.y = 1.0f - 2.0f * static_cast<float>(y) / w_height;
+	if (!cameraToggle)
+	{
+		if (hideCursor == true) 
+		{
+			glutSetCursor(GLUT_CURSOR_INHERIT);
+			hideCursor = false;
+		}
+		return ;
+	}
+	if (!hideCursor)
+	{
+		hideCursor = true;
+		glutSetCursor(GLUT_CURSOR_NONE);
+	}
+
+	// Get the current window size dynamically
+	int windowWidth = glutGet(GLUT_WINDOW_WIDTH);
+	int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
+
+	int windowCenterX = windowWidth / 2;
+	int windowCenterY = windowHeight / 2;
+
+	if (firstMouse || ignoreMouseEvent) {
+		lastX = windowCenterX;
+		lastY = windowCenterY;
+		firstMouse = false;
+		ignoreMouseEvent = false;
+		return ;
+	}
+
+	// Calculate the mouse movement offsets
+	float xOffset = lastX - x;
+	float yOffset = lastY - y; // Invert y-axis to match typical camera movement
+
+	// Save the current mouse position for the next callback
+	lastX = x;
+	lastY = y;
+
+	// Apply sensitivity to smooth the movement
+	float sensitivity = 0.05f;
+	xOffset *= sensitivity;
+	yOffset *= sensitivity;
+
+	// Update the camera angles
+	cam.xangle += xOffset * cam.rotationspeed;
+	cam.yangle += yOffset * cam.rotationspeed;
+
+	// Limit the pitch (yangle) to avoid flipping
+	if (cam.yangle > 89.0f) cam.yangle = 89.0f;
+	if (cam.yangle < -89.0f) cam.yangle = -89.0f;
+
+	// Ignore movement for next call to move mouse from warpPointer function
+	ignoreMouseEvent = true;
+
+	// Optionally, recenter the mouse after each movement
+	glutWarpPointer(windowCenterX, windowCenterY);
 }
 
 void renderParticles() {
 	glBindBuffer(GL_ARRAY_BUFFER, particle_sys.particleBufferGL);
+	
+	// Enables vertex array for position of particles
 	glEnableClientState(GL_VERTEX_ARRAY);
-	glVertexPointer(3, GL_FLOAT, sizeof(particle), 0);
+	glVertexPointer(3, GL_FLOAT, sizeof(particle), (void *)offsetof(particle, pos));
+
+	// Enables color array for colors
+	glEnableClientState(GL_COLOR_ARRAY);
+	glColorPointer(3, GL_FLOAT, sizeof(particle), (void *)offsetof(particle, color));
+
+	// Draw final result
 	glDrawArrays(GL_POINTS, 0, particle_sys.nb_particles);
 
+	// Release arrays and buffer
 	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// Render mass point as a sphere
+	glPushMatrix();
+	// Get the mass for its position
+	mass m = particle_sys.m;
+	glTranslatef(m.pos.x, m.pos.y, m.pos.z);
+	glColor3f(0.0f, 0.0f, 0.0f);
+	GLUquadric* quad = gluNewQuadric();
+	gluSphere(quad, particle_sys.m.radius / 2, 20, 20);
+	gluDeleteQuadric(quad);
+
+	glPopMatrix();
+
+	// Reset color to default
+	glColor3f(1.0f, 1.0f, 1.0f);
 }
 
 void updateParticles()

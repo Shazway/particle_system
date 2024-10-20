@@ -1,5 +1,5 @@
 # particle_system  
-Particle system project from 42 school, the goal is to create a simple yet efficient particle system in a 3D environment using openGL  
+Particle system project from 42 school, the goal is to create a simple yet efficient particle system in a 3D environment  using openGL  
   
 Controls:  
 Camera commands:  
@@ -13,6 +13,10 @@ Camera commands:
 'RIGHT_ARROW'	: Look right  
 'DOWN_ARROW'	: Look down  
 'UP_ARROW'		: Look up  
+'C'				: Toggle mouse control for camera angle  
+(For mouse control it will hide the mouse untill you press C again)  
+(Use the mouse to turn around in the simulation like in a first person shooter)
   
 Simulation controls:  
 'M'	: Toggle mass intensity  
+'0'	: Reset simulation to the cube  

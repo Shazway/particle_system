@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/18 20:21:20 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/19 15:12:19 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -89,12 +89,6 @@ namespace psys {
 		float x, y, z;
 	};
 
-	struct mass {
-		float x, y, z;
-		float intensity;
-		float radius;
-	};
-
 	struct vec2 {
 		float x, y;
 
@@ -143,11 +137,18 @@ namespace psys {
 	};
 
 	const float movespeed = 0.1f;
-	const unsigned int cubeSize = 5;
+	const unsigned int cubeSize = 10;
 
 	struct particle {
 		double3 pos;
 		double3 velocity;
+		double3 color;
+	};
+
+	struct mass {
+		double3 pos;
+		float intensity;
+		float radius;
 	};
 
 	class particle_system {

@@ -3,8 +3,13 @@ typedef struct {
 } vec3;
 
 typedef struct {
+	float r, g, b;
+} color;
+
+typedef struct {
 	vec3 pos;
 	vec3 velocity;
+	color color;
 } particle;
 
 __kernel void init_particles_cube(__global particle* particles, unsigned int cubeSize) {
@@ -26,4 +31,9 @@ __kernel void init_particles_cube(__global particle* particles, unsigned int cub
 	particles[id].velocity.x = 0.0f;
 	particles[id].velocity.y = 0.0f;
 	particles[id].velocity.z = 0.0f;
+
+	// Initialize white particles
+	particles[id].color.r = 0.0f;
+	particles[id].color.g = 0.0f;
+	particles[id].color.b = 0.0f;
 }

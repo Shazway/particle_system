@@ -7,8 +7,13 @@ typedef struct {
 } vec3;
 
 typedef struct {
+	float r, g, b;
+} color;
+
+typedef struct {
 	vec3 pos;
 	vec3 velocity;
+	color color;
 } particle;
 
 typedef struct {
@@ -20,43 +25,74 @@ typedef struct {
 __kernel void updateParticles(__global particle *particles, mass m) {
 	int id = get_global_id(0);
 	const float deltaTime = 0.016f;
+	const float decayFactor = 0.995f;
 	particle p = particles[id];
 
-	// Calculate direction vector towards the mass point
 	vec3 direction;
-	direction.x = m.position.x - p.pos.x;
-	direction.y = m.position.y - p.pos.y;
-	direction.z = m.position.z - p.pos.z;
+	direction.x = m.position.x - particles[id].pos.x;
+	direction.y = m.position.y - particles[id].pos.y;
+	direction.z = m.position.z - particles[id].pos.z;
 
-	// Calculate the distance from the particle to the mass center
+	// Compute distance from the particle to the center of mass
 	float distance = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
 
-	// Normalize direction
-	if (distance > 0.0f) {
-		direction.x /= distance;
-		direction.y /= distance;
-		direction.z /= distance;
+	// Normalize the direction vector
+	vec3 directionNorm;
+	directionNorm.x = direction.x / distance;
+	directionNorm.y = direction.y / distance;
+	directionNorm.z = direction.z / distance;
+
+	// If the particle is outside the massRadius, apply gravitational attraction
+	if (distance > m.radius) {
+		// Gravitational force (simplified inverse square law)
+		float gravitationalForce = m.intensity / (distance * distance) * 20.0f;
+
+		// Update velocity towards mass center (radial component)
+		particles[id].velocity.x += directionNorm.x * gravitationalForce * deltaTime;
+		particles[id].velocity.y += directionNorm.y * gravitationalForce * deltaTime;
+		particles[id].velocity.z += directionNorm.z * gravitationalForce * deltaTime;
+	}
+	else
+	{
+		// Inside the mass radius, add a 3D tangential velocity for swirling motion
+		// Arbitrary vector for cross product
+		vec3 upVector = { 0.0f, 1.0f, 0.0f };
+
+		// Compute cross product to get perpendicular direction for tangential velocity
+		vec3 tangentialVelocity;
+		tangentialVelocity.x = directionNorm.y * upVector.z - directionNorm.z * upVector.y;
+		tangentialVelocity.y = directionNorm.z * upVector.x - directionNorm.x * upVector.z;
+		tangentialVelocity.z = directionNorm.x * upVector.y - directionNorm.y * upVector.x;
+
+		// Scale the tangential velocity by some factor
+		float tangentialForce = m.intensity / distance;
+		tangentialVelocity.x *= tangentialForce * deltaTime;
+		tangentialVelocity.y *= tangentialForce * deltaTime;
+		tangentialVelocity.z *= tangentialForce * deltaTime;
+
+		// Apply the tangential velocity
+		particles[id].velocity.x += tangentialVelocity.x * 2.0f;
+		particles[id].velocity.y += tangentialVelocity.y * 2.0f;
+		particles[id].velocity.z += tangentialVelocity.z * 2.0f;
 	}
 
-	// Adjust force based on distance and mass radius
-	float force;
-	if (distance < m.radius) {
-		// Gradually reduce force within the radius
-		force = (m.intensity / m.radius) * (distance / m.radius);
-	} else {
-		// Outside the radius, apply inverse-square law
-		force = m.intensity / (distance * distance);
-	}
 
-	// Apply acceleration to velocity
-	p.velocity.x += direction.x * force * deltaTime;
-	p.velocity.y += direction.y * force * deltaTime;
-	p.velocity.z += direction.z * force * deltaTime;
+	// Slowing down particles so they don't go too far away
+	particles[id].velocity.x *= decayFactor;
+	particles[id].velocity.y *= decayFactor;
+	particles[id].velocity.z *= decayFactor;
 
-	// Update position based on velocity
-	p.pos.x += p.velocity.x * deltaTime;
-	p.pos.y += p.velocity.y * deltaTime;
-	p.pos.z += p.velocity.z * deltaTime;
+	// Update the position based on the updated velocity
+	particles[id].pos.x += particles[id].velocity.x * deltaTime;
+	particles[id].pos.y += particles[id].velocity.y * deltaTime;
+	particles[id].pos.z += particles[id].velocity.z * deltaTime;
 
-	particles[id] = p;
+	// Normalize distance and avoid division with 0
+	float normalizedDist = clamp(distance / m.radius, 0.0f, 1.0f) / 2.0f;
+	float totalVelocity = particles[id].velocity.x + particles[id].velocity.y + particles[id].velocity.z;
+	float normalizedVelocity = clamp(totalVelocity, 0.0f, 1.0f) / 2.0f;
+	// Update colors based on distance to the mass point
+	particles[id].color.r = clamp(normalizedVelocity - normalizedDist, 0.0f, 1.0f);
+	particles[id].color.g = clamp((normalizedDist + normalizedVelocity) * 0.3f, 0.0f, 1.0f);
+	particles[id].color.b = clamp(0.5f * normalizedDist, 0.0f, 1.0f);
 }
