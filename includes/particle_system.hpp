@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/19 15:12:19 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/20 13:30:38 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,7 +85,7 @@ namespace psys {
 		vec3(float x = 0.0, float y = 0.0, float z = 0.0) : x(x), y(y), z(z) {}
 	};
 
-	struct double3 {
+	struct float3 {
 		float x, y, z;
 	};
 
@@ -140,13 +140,14 @@ namespace psys {
 	const unsigned int cubeSize = 10;
 
 	struct particle {
-		double3 pos;
-		double3 velocity;
-		double3 color;
+		float3 pos;
+		float3 velocity;
+		float3 color;
 	};
 
 	struct mass {
-		double3 pos;
+		float3 pos;
+		float3 rotationTangent;
 		float intensity;
 		float radius;
 	};
@@ -171,13 +172,13 @@ namespace psys {
 			bool enqueueInitCubeParticles();
 			bool enqueueInitSphereParticles();
 			void resetSimulation();
+			void update_mass_tangent(float x, float y, float z);
 
 			//Exit functions
 			bool freeCLdata(bool err, const std::string &err_msg = "");
 
+			// OpenCL data
 			cl_int err;
-			size_t nb_particles;
-			size_t particleBufferSize;
 			cl_context context;
 			cl_command_queue queue;
 			cl_program update_program;
@@ -190,9 +191,15 @@ namespace psys {
 			cl_uint num_platforms;
 			cl_uint num_devices;
 			cl_mem particleBufferCL;
+
+			// OpenGL data
 			GLuint particleBufferGL;
+			
+			// Useful simulation data
 			vec2 mousePos;
 			bool resetSim;
+			size_t nb_particles;
+			size_t particleBufferSize;
 			mass m;
 	};
 };

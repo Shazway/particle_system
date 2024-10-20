@@ -18,5 +18,14 @@ Camera commands:
 (Use the mouse to turn around in the simulation like in a first person shooter)
   
 Simulation controls:  
-'M'	: Toggle mass intensity  
+Mass commands:  
+'M'	: Toggle mass activity  
+'U'	: Increase X rotation angle for particles  
+'I'	: Increase Y rotation angle for particles  
+'O'	: Increase Z rotation angle for particles  
+'J'	: Decrease X rotation angle for particles  
+'K'	: Decrease Y rotation angle for particles  
+'L'	: Decrease Z rotation angle for particles  
+'T'	: Reset rotation angle to default x, y, z(0, 1, 0)  
+  
 '0'	: Reset simulation to the cube  

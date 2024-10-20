@@ -18,6 +18,7 @@ typedef struct {
 
 typedef struct {
 	vec3 position;
+	vec3 rotationTangent;
 	float intensity;
 	float radius;
 } mass;
@@ -56,13 +57,12 @@ __kernel void updateParticles(__global particle *particles, mass m) {
 	{
 		// Inside the mass radius, add a 3D tangential velocity for swirling motion
 		// Arbitrary vector for cross product
-		vec3 upVector = { 0.0f, 1.0f, 0.0f };
-
+		vec3 rotationTangent = { 0.0f, 1.0f, 0.0f };
 		// Compute cross product to get perpendicular direction for tangential velocity
 		vec3 tangentialVelocity;
-		tangentialVelocity.x = directionNorm.y * upVector.z - directionNorm.z * upVector.y;
-		tangentialVelocity.y = directionNorm.z * upVector.x - directionNorm.x * upVector.z;
-		tangentialVelocity.z = directionNorm.x * upVector.y - directionNorm.y * upVector.x;
+		tangentialVelocity.x = directionNorm.y * m.rotationTangent.z - directionNorm.z * m.rotationTangent.y;
+		tangentialVelocity.y = directionNorm.z * m.rotationTangent.x - directionNorm.x * m.rotationTangent.z;
+		tangentialVelocity.z = directionNorm.x * m.rotationTangent.y - directionNorm.y * m.rotationTangent.x;
 
 		// Scale the tangential velocity by some factor
 		float tangentialForce = m.intensity / distance;

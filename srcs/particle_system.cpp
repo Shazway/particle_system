@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/19 15:11:41 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/20 13:56:56 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,11 +30,22 @@ namespace psys {
 		m.pos.y = -20.0f;
 		m.pos.z = -10.0f;
 
+		// Default rotation angle for particles around the mass
+		m.rotationTangent.x = 0.0f;
+		m.rotationTangent.y = 1.0f;
+		m.rotationTangent.z = 0.0f;
+
 		resetSim = false;
 	}
 
 	particle_system::~particle_system() {
 		freeCLdata(false);
+	}
+
+	void particle_system::update_mass_tangent(float x, float y, float z) {
+		m.rotationTangent.x = std::clamp(m.rotationTangent.x + x, 0.0f, 1.0f);
+		m.rotationTangent.y = std::clamp(m.rotationTangent.y + y, 0.0f, 1.0f);
+		m.rotationTangent.z = std::clamp(m.rotationTangent.z + z, 0.0f, 1.0f);
 	}
 
 	/*

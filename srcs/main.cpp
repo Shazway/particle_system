@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/20 12:41:43 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/20 13:54:02 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,6 +61,8 @@ void keyPress(unsigned char key, int x, int y)
 		particle_sys.resetSim = true;
 	if (key == 'c')
 		cameraToggle = !cameraToggle;
+	if (key == 't')
+		particle_sys.m.rotationTangent = {0.0f, 1.0f, 0.0f};
 	if (key == 27)
 		glutLeaveMainLoop();
 }
@@ -82,6 +84,9 @@ void mouseCallback(int x, int y) {
 	static bool firstMouse = true;
 	static int lastX = 0, lastY = 0;
 
+	particle_sys.mousePos.x = x;
+	particle_sys.mousePos.y = y;
+	//TODO: process mouse position in 3D space
 	if (!cameraToggle)
 	{
 		if (hideCursor == true) 
@@ -237,6 +242,22 @@ void update(int value)
 		cam.xangle = 0.0;
 	else if (cam.xangle < 0.0)
 		cam.xangle = 360.0;
+
+	// Mass control
+	// Increase tangent vector rotation in x, y z respectively
+	if (keyStates['u'])
+		particle_sys.update_mass_tangent(0.1f, 0.0f, 0.0f);
+	if (keyStates['i'])
+		particle_sys.update_mass_tangent(0.0f, 0.1f, 0.0f);
+	if (keyStates['o'])
+		particle_sys.update_mass_tangent(0.0f, 0.0f, 0.1f);
+	// Decrease tangent vector rotation in x, y z respectively
+	if (keyStates['j'])
+		particle_sys.update_mass_tangent(-0.1f, 0.0f, 0.0f);
+	if (keyStates['k'])
+		particle_sys.update_mass_tangent(0.0f, -0.1f, 0.0f);
+	if (keyStates['l'])
+		particle_sys.update_mass_tangent(0.0f, 0.0f, -0.1f);
 
 	glutPostRedisplay();
 	// Call update every 8 milliseconds (~120 FPS)
