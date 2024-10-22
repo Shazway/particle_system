@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/20 13:56:56 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/22 02:12:58 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@ namespace psys {
 		m.rotationTangent.z = 0.0f;
 
 		resetSim = false;
+		reset_shape = particleShape::CUBE;
 	}
 
 	particle_system::~particle_system() {
@@ -50,10 +51,13 @@ namespace psys {
 
 	/*
 		Resets the simulation,
-		Releases all previous data and sets it back to the cube
+		Releases all previous data and sets it back to the selected shape
 	*/
 	void particle_system::resetSimulation() {
-		std::cout << "Resetting the simulation back to the cube" << std::endl;
+		if (reset_shape == particleShape::CUBE)
+			std::cout << "Resetting the simulation back to a cube of size: " << cubeSize << std::endl;
+		if (reset_shape == particleShape::SPHERE)
+			std::cout << "Resetting the simulation back to a sphere of radius: " << sphereRadius << std::endl;
 		freeCLdata(false);
 		initCLdata();
 		resetSim = false;
@@ -129,12 +133,38 @@ namespace psys {
 		clFinish(queue);
 		return true;
 	}
+
 	/*
 		Computes the first particle positions inside a sphere
-		depending on sphere size and number of particles
+		depending on sphere radius and number of particles
 	*/
 	bool particle_system::enqueueInitSphereParticles() {
-		// .. TODO
+		//Acquiring buffer
+		err = clEnqueueAcquireGLObjects(queue, 1, &particleBufferCL, 0, nullptr, nullptr);
+		if (err != CL_SUCCESS)
+			return freeCLdata(true, ENQUEUE_BUFFER_CL_GL_ERR);
+
+		// Set kernel arguments
+		err = clSetKernelArg(init_particles_sphere, 0, sizeof(cl_mem), &particleBufferCL);
+		if (err != CL_SUCCESS)
+			return freeCLdata(true, KERNEL_ARGS_SET_ERR);
+		err = clSetKernelArg(init_particles_sphere, 1, sizeof(float), &sphereRadius);
+		if (err != CL_SUCCESS)
+			return freeCLdata(true, KERNEL_ARGS_SET_ERR);
+
+		// Execute the init kernel
+		size_t globalWorkSize = nb_particles;
+		err = clEnqueueNDRangeKernel(queue, init_particles_sphere, 1, NULL, &globalWorkSize, NULL, 0, NULL, NULL);
+		if (err != CL_SUCCESS)
+		{
+			std::cout << "Error code: " << err << std::endl;
+			return freeCLdata(true, ENQUEUE_NDRANGE_KERNEL_ERR);
+		}
+		clFinish(queue);
+		err = clEnqueueReleaseGLObjects(queue, 1, &particleBufferCL, 0, nullptr, nullptr);
+		if (err != CL_SUCCESS)
+			return freeCLdata(true, RELEASE_BUFFER_CL_GL_ERR);
+		clFinish(queue);
 		return true;
 	}
 
@@ -170,7 +200,6 @@ namespace psys {
 		Releases all CL/GL data from the particle_system
 	*/
 	bool particle_system::freeCLdata(bool err, const std::string &err_msg) {
-		std::cout << "OpenCL freeData call" << std::endl;
 		if (err)
 			std::cerr << "Error: " << err_msg << std::endl;
 		// Avoid double frees by checking and setting to nullptr
@@ -208,7 +237,8 @@ namespace psys {
 		cl_khr_gl_sharing, essential for such computing
 	*/
 	bool particle_system::selectDevice() {
-		std::cout << "Selecting device (GPU)..." << std::endl;
+		if (!resetSim)
+			std::cout << "Selecting device (GPU)..." << std::endl;
 		// Step 1: Get platform IDs
 		cl_uint num_platforms;
 		err = clGetPlatformIDs(0, nullptr, &num_platforms);
@@ -260,7 +290,8 @@ namespace psys {
 					}
 					selected_device = device;
 					selected_platform = platId;
-					std::cout << device_name << " selected" << std::endl;
+					if (!resetSim)
+						std::cout << device_name << " selected" << std::endl;
 					return true;
 				}
 				else
@@ -367,7 +398,8 @@ namespace psys {
 			std::cerr << buffer << std::endl;
 			return freeCLdata(true, std::string(PROGRAM_BUILD_ERR) + " update_program");
 		}
-		// OpenCL kernel source for initializing particles
+
+		// OpenCL kernel source for initializing particles in a cube
 		const char *initParticlesCubeSrc = get_CL_program("kernel_srcs/init_particles_cube.cl");
 		if (!initParticlesCubeSrc)
 			return freeCLdata(true, FETCH_CL_FILE_ERR);
@@ -388,6 +420,28 @@ namespace psys {
 			std::cerr << buffer << std::endl;
 			return freeCLdata(true, std::string(PROGRAM_BUILD_ERR) + " init_cube_program");
 		}
+
+		// OpenCL kernel source for initializing particles in a sphere
+		const char *initParticlesSphereSrc = get_CL_program("kernel_srcs/init_particles_sphere.cl");
+		if (!initParticlesSphereSrc)
+			return freeCLdata(true, FETCH_CL_FILE_ERR);
+
+		//Init cube_init program
+		// Create program for initializing particles
+		init_sphere_program = clCreateProgramWithSource(context, 1, &initParticlesSphereSrc, nullptr, &err);
+		if (err != CL_SUCCESS || !init_sphere_program)
+			return freeCLdata(true, std::string(PROGRAM_CREATE_ERR) + " init_particles_sphere");
+
+		// Build the init program
+		err = clBuildProgram(init_sphere_program, 1, &selected_device, nullptr, nullptr, nullptr);
+		if (err != CL_SUCCESS) {
+			size_t len;
+			char buffer[2048];
+			bzero(buffer, sizeof(buffer));
+			clGetProgramBuildInfo(init_sphere_program, selected_device, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+			std::cerr << buffer << std::endl;
+			return freeCLdata(true, std::string(PROGRAM_BUILD_ERR) + " init_sphere_program");
+		}
 		return true;
 	}
 
@@ -395,10 +449,15 @@ namespace psys {
 		Initialises openCL kernels with the cl programs
 	*/
 	bool particle_system::initKernels() {
-		// Create init particles kernel
+		// Create init cube particles kernel
 		init_particles_cube = clCreateKernel(init_cube_program, "init_particles_cube", &err);
 		if (err != CL_SUCCESS || !init_particles_cube)
 			return freeCLdata(true, std::string(KERNEL_CREATE_ERR) + " init_cube_program");
+
+		// Create init sphere particles kernel
+		init_particles_sphere = clCreateKernel(init_sphere_program, "init_particles_sphere", &err);
+		if (err != CL_SUCCESS || !init_particles_sphere)
+			return freeCLdata(true, std::string(KERNEL_CREATE_ERR) + " init_sphere_program");
 
 		// Create update particles kernel
 		calculate_position = clCreateKernel(update_program, "updateParticles", &err);
@@ -424,15 +483,20 @@ namespace psys {
 
 		if (nb_particles == 0)
 			return freeCLdata(true, NO_PARTICLES_ERR);
+
 		// Create a buffer that OpenCL can use
 		particleBufferCL = clCreateFromGLBuffer(context, CL_MEM_READ_WRITE, particleBufferGL, &err);
 		if (err != CL_SUCCESS || !particleBufferCL)
 			return freeCLdata(true, BUFFER_CREATE_ERR);
 
 		// Call init_cube kernel to init the particles in a cube
-		if (!enqueueInitCubeParticles())
+		if (reset_shape == particleShape::CUBE && !enqueueInitCubeParticles())
 			return false;
-		std::cout << "OpenCL particles data initialized directly on GPU" << std::endl;
+		// Call init_sphere kernel to init the particles in a sphere
+		else if (reset_shape == particleShape::SPHERE && !enqueueInitSphereParticles())
+			return false;
+		if (!resetSim)
+			std::cout << "OpenCL particles data initialized directly on GPU" << std::endl;
 		return true;
 	}
 };

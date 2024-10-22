@@ -25,7 +25,7 @@ typedef struct {
 
 __kernel void updateParticles(__global particle *particles, mass m) {
 	int id = get_global_id(0);
-	const float deltaTime = 0.016f;
+	const float deltaTime = 0.008f;
 	const float decayFactor = 0.995f;
 	particle p = particles[id];
 
@@ -55,9 +55,6 @@ __kernel void updateParticles(__global particle *particles, mass m) {
 	}
 	else
 	{
-		// Inside the mass radius, add a 3D tangential velocity for swirling motion
-		// Arbitrary vector for cross product
-		vec3 rotationTangent = { 0.0f, 1.0f, 0.0f };
 		// Compute cross product to get perpendicular direction for tangential velocity
 		vec3 tangentialVelocity;
 		tangentialVelocity.x = directionNorm.y * m.rotationTangent.z - directionNorm.z * m.rotationTangent.y;
@@ -88,9 +85,9 @@ __kernel void updateParticles(__global particle *particles, mass m) {
 	particles[id].pos.z += particles[id].velocity.z * deltaTime;
 
 	// Normalize distance and avoid division with 0
-	float normalizedDist = clamp(distance / m.radius, 0.0f, 1.0f) / 2.0f;
+	float normalizedDist = (distance / m.radius) / 2.0f;
 	float totalVelocity = particles[id].velocity.x + particles[id].velocity.y + particles[id].velocity.z;
-	float normalizedVelocity = clamp(totalVelocity, 0.0f, 1.0f) / 2.0f;
+	float normalizedVelocity =  totalVelocity / 2.0f;
 	// Update colors based on distance to the mass point
 	particles[id].color.r = clamp(normalizedVelocity - normalizedDist, 0.0f, 1.0f);
 	particles[id].color.g = clamp((normalizedDist + normalizedVelocity) * 0.3f, 0.0f, 1.0f);

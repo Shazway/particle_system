@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/20 13:30:38 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/22 03:05:37 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,11 +72,8 @@
 	"'Esc': Exit program"
 
 
-
-
-
-#define W_WIDTH 800
-#define W_HEIGHT 600
+#define W_WIDTH 1440
+#define W_HEIGHT 1080
 
 namespace psys {
 	struct vec3 {
@@ -137,7 +134,8 @@ namespace psys {
 	};
 
 	const float movespeed = 0.1f;
-	const unsigned int cubeSize = 10;
+	const unsigned int cubeSize = 20;
+	const float sphereRadius = 5.0f;
 
 	struct particle {
 		float3 pos;
@@ -150,6 +148,11 @@ namespace psys {
 		float3 rotationTangent;
 		float intensity;
 		float radius;
+	};
+
+	enum particleShape {
+		SPHERE,
+		CUBE
 	};
 
 	class particle_system {
@@ -183,6 +186,7 @@ namespace psys {
 			cl_command_queue queue;
 			cl_program update_program;
 			cl_program init_cube_program;
+			cl_program init_sphere_program;
 			cl_kernel calculate_position;
 			cl_kernel init_particles_cube;
 			cl_kernel init_particles_sphere;
@@ -198,6 +202,7 @@ namespace psys {
 			// Useful simulation data
 			vec2 mousePos;
 			bool resetSim;
+			particleShape reset_shape;
 			size_t nb_particles;
 			size_t particleBufferSize;
 			mass m;

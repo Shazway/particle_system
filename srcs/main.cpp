@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/20 13:54:02 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/22 03:05:17 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,6 +34,32 @@ bool specialKeyStates[256] = {false};
 particle_system particle_sys(particle_number);
 cl_event kernel_event;
 
+// FPS counter
+int frameCount = 0;
+double lastFrameTime = 0.0;
+double currentFrameTime = 0.0;
+double fps = 0.0;
+
+void calculateFps()
+{
+	frameCount++;
+	currentFrameTime = glutGet(GLUT_ELAPSED_TIME);
+
+	double timeInterval = currentFrameTime - lastFrameTime;
+
+	if (timeInterval > 1000)
+	{
+		fps = frameCount / (timeInterval / 1000.0);
+
+		lastFrameTime = currentFrameTime;
+		frameCount = 0;
+
+		std::stringstream title;
+		title << "particle_system | FPS: " << fps;
+		glutSetWindowTitle(title.str().c_str());
+	}
+}
+
 void specialKeyPress(int key, int x, int y)
 {
 	(void)x;
@@ -56,14 +82,22 @@ void keyPress(unsigned char key, int x, int y)
 	if (key == 'm' && particle_sys.m.intensity)
 		particle_sys.m.intensity = 0.0f;
 	else if (key == 'm' && !particle_sys.m.intensity)
-		particle_sys.m.intensity = 25.0f;
+		particle_sys.m.intensity = 50.0f;
 	if (key == '0')
+	{
+		particle_sys.reset_shape = particleShape::CUBE;
 		particle_sys.resetSim = true;
-	if (key == 'c')
+	}
+	else if (key == '1')
+	{
+		particle_sys.reset_shape = particleShape::SPHERE;
+		particle_sys.resetSim = true;
+	}
+	else if (key == 'c')
 		cameraToggle = !cameraToggle;
-	if (key == 't')
+	else if (key == 't')
 		particle_sys.m.rotationTangent = {0.0f, 1.0f, 0.0f};
-	if (key == 27)
+	else if (key == 27)
 		glutLeaveMainLoop();
 }
 
@@ -212,6 +246,8 @@ void display()
 	// Draw particles
 	renderParticles();
 	glutSwapBuffers();
+	calculateFps();
+	glutPostRedisplay();
 }
 
 void update(int value)
