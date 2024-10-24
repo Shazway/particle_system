@@ -13,7 +13,6 @@ CC			=	g++
 SRC_PATH	=	srcs/
 INCLUDES	=	-Iincludes
 SRC_NAME	=	main.cpp			\
-				matrix.cpp			\
 				camera.cpp			\
 				particle_system.cpp
 

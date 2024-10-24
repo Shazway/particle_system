@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/22 02:12:58 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/25 01:15:47 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,24 @@
 namespace psys {
 	particle_system::particle_system(const size_t &nbParticles) : nb_particles(nbParticles) {
 		std::cout << "Starting particle system with: " << nb_particles << " particles" << std::endl;
+		resetSim = false;
+		reset_shape = particleShape::CUBE;
+		massFollow = false;
+		massDisplay = true;
+		windowHeight = (int)W_HEIGHT;
+		windowWidth = (int)W_WIDTH;
+		initSimData();
+	}
+
+	particle_system::~particle_system() {
+		freeCLdata(false);
+	}
+
+	/*
+		Initialises simulation data
+	*/
+	void particle_system::initSimData()
+	{
 		context = nullptr;
 		queue = nullptr;
 		update_program = nullptr;
@@ -25,7 +43,7 @@ namespace psys {
 		
 		// No mass or intensity at first
 		m.intensity = 0.0f;
-		m.radius = 10.0f;
+		m.radius = 5.0f;
 		m.pos.x = 5.0f;
 		m.pos.y = -20.0f;
 		m.pos.z = -10.0f;
@@ -34,19 +52,53 @@ namespace psys {
 		m.rotationTangent.x = 0.0f;
 		m.rotationTangent.y = 1.0f;
 		m.rotationTangent.z = 0.0f;
-
-		resetSim = false;
-		reset_shape = particleShape::CUBE;
 	}
 
-	particle_system::~particle_system() {
-		freeCLdata(false);
+	/*
+		Updates the mouse position
+	*/
+	void particle_system::update_mouse_pos(int x, int y)
+	{
+		mousePos.x = static_cast<float>(x);
+		mousePos.y = static_cast<float>(y);
 	}
 
-	void particle_system::update_mass_tangent(float x, float y, float z) {
+	/*
+		Updates the window size
+	*/
+	void particle_system::update_window_size(int width, int height)
+	{
+		windowWidth = width;
+		windowHeight = height;
+	}
+
+	/*
+		Updates the mass tangent,
+		The particles at which angle they rotate around the mass depends on these parameters
+	*/
+	void particle_system::update_mass_tangent(float x, float y, float z)
+	{
 		m.rotationTangent.x = std::clamp(m.rotationTangent.x + x, 0.0f, 1.0f);
 		m.rotationTangent.y = std::clamp(m.rotationTangent.y + y, 0.0f, 1.0f);
 		m.rotationTangent.z = std::clamp(m.rotationTangent.z + z, 0.0f, 1.0f);
+	}
+
+	/*
+		Updates the mass position,
+		The mass is updated at the position of the cursor translated in 3D
+	*/
+	void particle_system::update_mass_position(glm::mat4 projectionMatrix, glm::mat4 viewMatrix)
+	{
+		// Normalized Dimension coordinates
+		float xNDC = (2.0f * mousePos.x) / windowWidth - 1.0f;
+		float yNDC = 1.0f - (2.0f * mousePos.y) / windowHeight;
+		float zNDC = 0.75f;
+
+		glm::vec4 mouseClipCoords = glm::vec4(xNDC, yNDC, zNDC, 1.0f);
+		glm::vec4 pointingWorldCoords = glm::inverse(projectionMatrix * viewMatrix) * mouseClipCoords;
+		pointingWorldCoords /= pointingWorldCoords.w;
+
+		m.pos = {pointingWorldCoords.x, pointingWorldCoords.y, pointingWorldCoords.z};
 	}
 
 	/*
@@ -59,6 +111,7 @@ namespace psys {
 		if (reset_shape == particleShape::SPHERE)
 			std::cout << "Resetting the simulation back to a sphere of radius: " << sphereRadius << std::endl;
 		freeCLdata(false);
+		initSimData();
 		initCLdata();
 		resetSim = false;
 	}

@@ -2,6 +2,7 @@
 Particle system project from 42 school, the goal is to create a simple yet efficient particle system in a 3D environment  using openGL  
   
 Controls:  
+'H'	: Display commands  
 Camera commands:  
 'Z', 'W'		: Move forward  
 'Q', 'A'		: Move left  
@@ -9,10 +10,6 @@ Camera commands:
 'D'				: Move right  
 ' '				: Move up  
 'V'				: Move down  
-'LEFT_ARROW'	: Look left  
-'RIGHT_ARROW'	: Look right  
-'DOWN_ARROW'	: Look down  
-'UP_ARROW'		: Look up  
 'C'				: Toggle mouse control for camera angle  
 (For mouse control it will hide the mouse untill you press C again)  
 (Use the mouse to turn around in the simulation like in a first person shooter)
@@ -23,6 +20,8 @@ Simulation controls:
   
 Mass commands:  
 'M'	: Toggle mass activity  
+'+'	: Increase gravitational pull  
+'-'	: Decrease gravitational pull (becomes a push after 0 threshold)  
 'U'	: Increase X rotation angle for particles  
 'I'	: Increase Y rotation angle for particles  
 'O'	: Increase Z rotation angle for particles  
@@ -30,3 +29,4 @@ Mass commands:
 'K'	: Decrease Y rotation angle for particles  
 'L'	: Decrease Z rotation angle for particles  
 'T'	: Reset rotation angle to default x, y, z(0, 1, 0)  
+'F'	: Toggle mass follow on cursor (will follow the center of the screen if mouse control is active)  

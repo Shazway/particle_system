@@ -6,42 +6,37 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/22 03:05:17 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/25 01:21:47 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "particle_system.hpp"
-#include "matrix.hpp"
 #include "camera.hpp"
 #include "particle_system.hpp"
 
 using namespace psys;
 
 // Constants
-const size_t particle_number = 1000000; 
+const size_t particle_number = 3000000; 
 const float mouse_sensitivity = 0.05f;
 
 // Globals
-bool resetSim = false;
 bool ignoreMouseEvent = false;
 bool hideCursor = false;
-bool cameraToggle = false;
 camera cam;
-mat4 projectionMatrix;
-mat4 viewMatrix;
+glm::mat4 projectionMatrix(1.0);
+glm::mat4 viewMatrix(1.0);
 bool keyStates[256] = {false};
-bool specialKeyStates[256] = {false};
 particle_system particle_sys(particle_number);
-cl_event kernel_event;
 
 // FPS counter
 int frameCount = 0;
 double lastFrameTime = 0.0;
 double currentFrameTime = 0.0;
-double fps = 0.0;
 
 void calculateFps()
 {
+	double fps = 0.0;
 	frameCount++;
 	currentFrameTime = glutGet(GLUT_ELAPSED_TIME);
 
@@ -60,20 +55,6 @@ void calculateFps()
 	}
 }
 
-void specialKeyPress(int key, int x, int y)
-{
-	(void)x;
-	(void)y;
-	specialKeyStates[key] = true;
-}
-
-void specialKeyRelease(int key, int x, int y)
-{
-	(void)x;
-	(void)y;
-	specialKeyStates[key] = false;
-}
-
 void keyPress(unsigned char key, int x, int y)
 {
 	(void)x;
@@ -82,7 +63,7 @@ void keyPress(unsigned char key, int x, int y)
 	if (key == 'm' && particle_sys.m.intensity)
 		particle_sys.m.intensity = 0.0f;
 	else if (key == 'm' && !particle_sys.m.intensity)
-		particle_sys.m.intensity = 50.0f;
+		particle_sys.m.intensity = 10.0f;
 	if (key == '0')
 	{
 		particle_sys.reset_shape = particleShape::CUBE;
@@ -94,9 +75,15 @@ void keyPress(unsigned char key, int x, int y)
 		particle_sys.resetSim = true;
 	}
 	else if (key == 'c')
-		cameraToggle = !cameraToggle;
+		cam.mouseRotation = !cam.mouseRotation;
 	else if (key == 't')
 		particle_sys.m.rotationTangent = {0.0f, 1.0f, 0.0f};
+	else if (key == 'f')
+		particle_sys.massFollow = !particle_sys.massFollow;
+	else if (key == 'p')
+		particle_sys.massDisplay = !particle_sys.massDisplay;
+	else if (key == 'h')
+		std::cout << COMMANDS_LIST << std::endl;
 	else if (key == 27)
 		glutLeaveMainLoop();
 }
@@ -108,26 +95,33 @@ void keyRelease(unsigned char key, int x, int y)
 	keyStates[key] = false;
 }
 
-void closeCallback() {
+void closeCallback()
+{
 	//Closing window callback to free all openCL related data
 	particle_sys.freeCLdata(false);
 	exit(0);
 }
 
-void mouseCallback(int x, int y) {
+void mouseCallback(int x, int y)
+{
 	static bool firstMouse = true;
 	static int lastX = 0, lastY = 0;
 
 	particle_sys.mousePos.x = x;
 	particle_sys.mousePos.y = y;
-	//TODO: process mouse position in 3D space
-	if (!cameraToggle)
+	// Get the current window size dynamically
+	int windowWidth = glutGet(GLUT_WINDOW_WIDTH);
+	int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
+
+	// Update the size
+	particle_sys.update_window_size(windowWidth, windowHeight);
+	particle_sys.update_mouse_pos(x, y);
+
+	// Hide cursor/Warp it to the center depending on cam.mouseRotation
+	if (!cam.mouseRotation || (!cam.mouseRotation && hideCursor))
 	{
-		if (hideCursor == true) 
-		{
-			glutSetCursor(GLUT_CURSOR_INHERIT);
-			hideCursor = false;
-		}
+		glutSetCursor(GLUT_CURSOR_INHERIT);
+		hideCursor = false;
 		return ;
 	}
 	if (!hideCursor)
@@ -135,10 +129,6 @@ void mouseCallback(int x, int y) {
 		hideCursor = true;
 		glutSetCursor(GLUT_CURSOR_NONE);
 	}
-
-	// Get the current window size dynamically
-	int windowWidth = glutGet(GLUT_WINDOW_WIDTH);
-	int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
 
 	int windowCenterX = windowWidth / 2;
 	int windowCenterY = windowHeight / 2;
@@ -179,9 +169,10 @@ void mouseCallback(int x, int y) {
 	glutWarpPointer(windowCenterX, windowCenterY);
 }
 
-void renderParticles() {
+void renderParticles()
+{
 	glBindBuffer(GL_ARRAY_BUFFER, particle_sys.particleBufferGL);
-	
+
 	// Enables vertex array for position of particles
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glVertexPointer(3, GL_FLOAT, sizeof(particle), (void *)offsetof(particle, pos));
@@ -199,19 +190,16 @@ void renderParticles() {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// Render mass point as a sphere
-	glPushMatrix();
-	// Get the mass for its position
-	mass m = particle_sys.m;
-	glTranslatef(m.pos.x, m.pos.y, m.pos.z);
-	glColor3f(0.0f, 0.0f, 0.0f);
-	GLUquadric* quad = gluNewQuadric();
-	gluSphere(quad, particle_sys.m.radius / 2, 20, 20);
-	gluDeleteQuadric(quad);
-
-	glPopMatrix();
-
-	// Reset color to default
-	glColor3f(1.0f, 1.0f, 1.0f);
+	if (particle_sys.massDisplay)
+	{
+		glPushMatrix();
+		glTranslatef(particle_sys.m.pos.x, particle_sys.m.pos.y, particle_sys.m.pos.z);
+		glColor3f(0.0f, 0.0f, 0.0f);
+		GLUquadric* quad = gluNewQuadric();
+		gluSphere(quad, particle_sys.m.radius / 10, 20, 20);
+		gluDeleteQuadric(quad);
+		glPopMatrix();
+	}
 }
 
 void updateParticles()
@@ -227,18 +215,31 @@ void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Matrix operations for the camera
-	float radX;
-	float radY;
 	glMatrixMode(GL_MODELVIEW);
+	// Matrix operations for the camera
+	float radY;
+	float radX;
 
-	viewMatrix = mat4::identity();
+	// Radians conversion
 	radX = cam.xangle * (M_PI / 180.0);
 	radY = cam.yangle * (M_PI / 180.0);
-	viewMatrix *= mat4::rotate(radY, 1.0, 0.0, 0.0);
-	viewMatrix *= mat4::rotate(radX, 0.0, 1.0, 0.0);
-	viewMatrix *= mat4::translate(cam.position.x, cam.position.y, cam.position.z);
-	glLoadMatrixf((viewMatrix).data[0].data());
+
+	viewMatrix = glm::mat4(1.0f);
+	viewMatrix = glm::rotate(viewMatrix, radY, glm::vec3(-1.0f, 0.0f, 0.0f));
+	viewMatrix = glm::rotate(viewMatrix, radX, glm::vec3(0.0f, -1.0f, 0.0f));
+	viewMatrix = glm::translate(viewMatrix, glm::vec3(cam.position.x, cam.position.y, cam.position.z));
+	glLoadMatrixf(glm::value_ptr(viewMatrix));
+
+	// Get the current window size dynamically
+	int windowWidth = glutGet(GLUT_WINDOW_WIDTH);
+	int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
+
+	// Update the size
+	particle_sys.update_window_size(windowWidth, windowHeight);
+
+	// Update the mass position to the cursor in space
+	if (particle_sys.massFollow)
+		particle_sys.update_mass_position(projectionMatrix, viewMatrix);
 
 	// Call update kernel
 	updateParticles();
@@ -254,26 +255,18 @@ void update(int value)
 {
 	(void)value;
 	// Camera movement
-	if (keyStates['z']) cam.move(1.0, 0.0);
-	if (keyStates['w']) cam.move(1.0, 0.0);
-	if (keyStates['q']) cam.move(0.0, 1.0);
-	if (keyStates['a']) cam.move(0.0, 1.0);
-	if (keyStates['s']) cam.move(-1.0, 0.0);
-	if (keyStates['d']) cam.move(0.0, -1.0);
-	if (keyStates[' ']) {
-		cam.position.y -= cam.movementspeed;
-		cam.center.y = cam.position.y;
-	}
-	if (keyStates['v']) {
-		cam.position.y += cam.movementspeed;
-		cam.center.y = cam.position.y;
-	}
+	if (keyStates['z']) cam.move(1.0, 0.0, 0.0);
+	if (keyStates['w']) cam.move(1.0, 0.0, 0.0);
+	if (keyStates['q']) cam.move(0.0, 1.0, 0.0);
+	if (keyStates['a']) cam.move(0.0, 1.0, 0.0);
+	if (keyStates['s']) cam.move(-1.0, 0.0, 0.0);
+	if (keyStates['d']) cam.move(0.0, -1.0, 0.0);
+	if (keyStates[' ']) cam.move(0.0, 0.0, -1.0);
+	if (keyStates['v']) cam.move(0.0, 0.0, 1.0);
+	if (keyStates['+']) particle_sys.m.intensity += 0.1f;
+	if (keyStates['-']) particle_sys.m.intensity -= 0.1f;
 
 	// Camera rotations
-	if (specialKeyStates[GLUT_KEY_LEFT]) cam.xangle += cam.rotationspeed;
-	if (specialKeyStates[GLUT_KEY_RIGHT]) cam.xangle -= cam.rotationspeed;
-	if (specialKeyStates[GLUT_KEY_UP] && cam.yangle < 45.0) cam.yangle += cam.rotationspeed;
-	if (specialKeyStates[GLUT_KEY_DOWN] && cam.yangle > -45.0) cam.yangle -= cam.rotationspeed;
 	if (cam.xangle > 360.0)
 		cam.xangle = 0.0;
 	else if (cam.xangle < 0.0)
@@ -306,9 +299,11 @@ void reshape(int width, int height)
 
 	// Apply projection matrix operations
 	glMatrixMode(GL_PROJECTION);
-	projectionMatrix = mat4::identity();
-	projectionMatrix *= mat4::perspective(45.0 / 180.0, (double)width / (double)height, 1.0, 100.0);
-	glLoadMatrixf((projectionMatrix).data[0].data());
+
+	// Load identity matrix
+	projectionMatrix = glm::mat4(1.0f);
+	projectionMatrix = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 1.0f, 1000.0f);
+	glLoadMatrixf(glm::value_ptr(projectionMatrix));
 }
 
 void initGlutWindow(int ac, char **av)
@@ -329,33 +324,39 @@ void initGlutEvents()
 	glutTimerFunc(8, update, 0); // 8 ticks per second update, 120 fps~
 	glutKeyboardFunc(keyPress);
 	glutKeyboardUpFunc(keyRelease);
-	glutSpecialFunc(specialKeyPress);
-	glutSpecialUpFunc(specialKeyRelease);
 	glutCloseFunc(closeCallback);
 	glutPassiveMotionFunc(mouseCallback);
 }
 
-void initGlew()
+bool initGlew()
 {
 	GLenum err = glewInit();
-	if (err != GLEW_OK) {
+	if (err != GLEW_OK)
+	{
 		std::cerr << "Error initializing GLEW" << glewGetErrorString(err) << std::endl;
+		return false;
 	}
+	return true;
 }
 
 int main(int argc, char **argv)
 {
-	if (particle_sys.err != CL_SUCCESS) {
+	if (particle_sys.err != CL_SUCCESS)
+	{
 		std::cerr << "Could not initialize openCL properly" << std::endl;
 		return 1;
 	}
 
 	initGlutWindow(argc, argv);
-	initGlew();
+	if (!initGlew())
+		return 1;
 	initGlutEvents();
 	particle_sys.initSharedBufferData();
 	if (!particle_sys.initCLdata())
 		return 1;
+	std::cout << std::endl;
+	std::cout << "Welcome to particle_system" << std::endl;
+	std::cout << "Press 'H' key to see the list of available commands" << std::endl;
 	glutMainLoop();
 	return 0;
 }

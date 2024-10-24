@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/22 03:05:37 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/25 01:05:02 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,39 +37,42 @@
 #include <string.h>
 #include <cstring>
 #include <stdlib.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-#define COMMANDS_LIST								\
-	"Model Commands:\n"								\
-	"Moving the model relative to the origin:\n"	\
-	"'C': Toggle camera mode\n"						\
-	"'Z', 'W': Move the model up\n"					\
-	"'Q', 'A': Move the model left\n"				\
-	"'S': Move the model down\n"					\
-	"'D': Move the model right\n"					\
-	"'+': Move the model further away\n"			\
-	"'-': Move the model closer\n"					\
-	"'O': Increase the model speed\n"				\
-	"'P': Decrease the model speed\n"				\
-	"\nRotating the model:\n"						\
-	"'X': Toggle X axis rotation\n"					\
-	"'Y': Toggle Y axis rotation\n"					\
-	"'R': Stop all rotations\n"						\
-	"'J': Accelerate rotations\n"					\
-	"'K': Decelerate rotations\n"					\
-	"\nCamera commands:\n"							\
-	"'Z', 'W': Move forward\n"						\
-	"'Q', 'A': Move left\n"							\
-	"'S': Move back\n"								\
-	"'D': Move right\n"								\
-	"' ': Move up\n"								\
-	"'V': Move down\n"								\
-	"'LEFT_ARROW': Look left\n"						\
-	"'RIGHT_ARROW': Look right\n"					\
-	"'DOWN_ARROW': Look down\n"						\
-	"'UP_ARROW': Look up\n"							\
-	"\nOther commands:\n"							\
-	"'0': Reset simulation\n"						\
-	"'Esc': Exit program"
+
+#define COMMANDS_LIST														\
+	"Controls:\n"															\
+	"'H': Display commands\n"												\
+	"\n"																	\
+	"Camera commands:\n"													\
+	"'Z', 'W': Move forward\n"												\
+	"'Q', 'A': Move left\n"													\
+	"'S': Move back\n"														\
+	"'D': Move right\n"														\
+	"' ': Move up\n"														\
+	"'V': Move down\n"														\
+	"'C': Toggle mouse control for camera angle\n"							\
+	"(Mouse control will hide the cursor until 'C' is pressed again)\n"		\
+	"\n"																	\
+	"Simulation controls:\n"												\
+	"'0': Reset simulation to the cube\n"									\
+	"'1': Reset simulation to the sphere\n"									\
+	"\n"																	\
+	"Mass commands:\n"														\
+	"'M': Toggle mass activity\n"											\
+	"'+': Increase gravitational pull\n"									\
+	"'-': Decrease gravitational pull (becomes a push after 0 threshold)\n" \
+	"'U': Increase X rotation angle for particles\n"						\
+	"'I': Increase Y rotation angle for particles\n"						\
+	"'O': Increase Z rotation angle for particles\n"						\
+	"'J': Decrease X rotation angle for particles\n"						\
+	"'K': Decrease Y rotation angle for particles\n"						\
+	"'L': Decrease Z rotation angle for particles\n"						\
+	"'T': Reset rotation angle to default (0, 1, 0)\n"						\
+	"'F': Toggle mass follow on cursor (follows screen center if mouse control is active)"
+
 
 
 #define W_WIDTH 1440
@@ -80,6 +83,11 @@ namespace psys {
 		float x, y, z;
 
 		vec3(float x = 0.0, float y = 0.0, float z = 0.0) : x(x), y(y), z(z) {}
+	};
+	struct vec4 {
+		float x, y, z, w;
+
+		vec4(float x = 0.0, float y = 0.0, float z = 0.0, float w = 0.0) : x(x), y(y), z(z), w(w) {}
 	};
 
 	struct float3 {
@@ -134,8 +142,8 @@ namespace psys {
 	};
 
 	const float movespeed = 0.1f;
-	const unsigned int cubeSize = 20;
-	const float sphereRadius = 5.0f;
+	const unsigned int cubeSize = 15;
+	const float sphereRadius = 1.0f;
 
 	struct particle {
 		float3 pos;
@@ -163,6 +171,7 @@ namespace psys {
 			//Init functions
 			bool initCLdata();
 			bool initContext();
+			void initSimData();
 			bool initQueue();
 			bool initPrograms();
 			bool initKernels();
@@ -176,6 +185,9 @@ namespace psys {
 			bool enqueueInitSphereParticles();
 			void resetSimulation();
 			void update_mass_tangent(float x, float y, float z);
+			void update_mass_position(glm::mat4 projectionMatrix, glm::mat4 viewMatrix);
+			void update_window_size(int height, int width);
+			void update_mouse_pos(int x, int y);
 
 			//Exit functions
 			bool freeCLdata(bool err, const std::string &err_msg = "");
@@ -200,8 +212,12 @@ namespace psys {
 			GLuint particleBufferGL;
 			
 			// Useful simulation data
-			vec2 mousePos;
 			bool resetSim;
+			bool massFollow;
+			bool massDisplay;
+			int windowHeight;
+			int windowWidth;
+			vec2 mousePos;
 			particleShape reset_shape;
 			size_t nb_particles;
 			size_t particleBufferSize;

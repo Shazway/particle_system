@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/01 20:27:33 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/16 21:58:10 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/25 01:16:17 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,10 @@
 
 namespace psys
 {
-	void camera::move(float  forward, float  strafe)
+	/*
+		Moving the camera around (first person view)
+	*/
+	void camera::move(float  forward, float  strafe, float up)
 	{
 		// Calculate the direction based on the current angles
 		float radiansY = yangle * (M_PI / 180.0);
@@ -35,8 +38,13 @@ namespace psys
 		position.x += (forwardZ + strafeZ) * movementspeed;
 		center.x = position.x;
 		center.z = position.z -10.0f;
+		position.y += movementspeed * up;
+		center.y = position.y;
 	}
 
+	/*
+		Reset the camera position
+	*/
 	void camera::reset()
 	{
 		position = vec3(0.0, 0.0, 0.0);
