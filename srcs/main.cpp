@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/25 01:21:47 by tmoragli         ###   ########.fr       */
+/*   Updated: 2024/10/25 01:33:55 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -194,7 +194,7 @@ void renderParticles()
 	{
 		glPushMatrix();
 		glTranslatef(particle_sys.m.pos.x, particle_sys.m.pos.y, particle_sys.m.pos.z);
-		glColor3f(0.0f, 0.0f, 0.0f);
+		glColor3f(1.0f, 1.0f, 1.0f);
 		GLUquadric* quad = gluNewQuadric();
 		gluSphere(quad, particle_sys.m.radius / 10, 20, 20);
 		gluDeleteQuadric(quad);
@@ -204,8 +204,10 @@ void renderParticles()
 
 void updateParticles()
 {
-	if (particle_sys.resetSim)
+	if (particle_sys.resetSim) {
 		particle_sys.resetSimulation();
+		cam.reset();
+	}
 	else
 		particle_sys.enqueueUpdateParticles();
 	return ;
