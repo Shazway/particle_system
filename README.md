@@ -1,6 +1,10 @@
 # particle_system  
 Particle system project from 42 school, the goal is to create a simple yet efficient particle system in a 3D environment  using openGL  
   
+Before you start, here are the necessary packages to download:  
+sudo apt install g++ libgl1-mesa-dev libglu1-mesa-dev freeglut3-dev \  
+libglew-dev libx11-dev ocl-icd-opencl-dev opencl-headers libglm-dev  
+  
 Controls:  
 'H'	: Display commands  
 Camera commands:  
