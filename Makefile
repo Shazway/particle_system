@@ -1,7 +1,7 @@
 NAME		=	particle_system
 DEBUG_NAME	=	particle_systemDebug
 
-LDFLAGS =	-lGL -lGLU -lglut -lOpenCL -lGLEW -lX11
+LDFLAGS =	-lGL -lGLU -lglfw -lOpenCL -lGLEW -lX11
 
 CFLAGS	=	-Wall -Wextra -Werror -O2 -g3
 DEBUG_CFLAGS	=	-DNDEBUG -Wall -Wextra -Werror -O2 -g3

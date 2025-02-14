@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/25 01:05:02 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/02/14 22:11:26 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,8 +17,6 @@
 
 // Useful includes
 #include <GL/glew.h>
-#include <GL/glut.h>
-#include <GL/freeglut.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -29,6 +27,7 @@
 #include <limits>
 #include <memory>
 #include <cmath>
+#include <chrono>
 #include <algorithm>
 #include <GL/glx.h>
 #include <CL/cl.h>
@@ -40,64 +39,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <GLFW/glfw3.h>
 
-
-#define COMMANDS_LIST														\
-	"Controls:\n"															\
-	"'H': Display commands\n"												\
-	"\n"																	\
-	"Camera commands:\n"													\
-	"'Z', 'W': Move forward\n"												\
-	"'Q', 'A': Move left\n"													\
-	"'S': Move back\n"														\
-	"'D': Move right\n"														\
-	"' ': Move up\n"														\
-	"'V': Move down\n"														\
-	"'C': Toggle mouse control for camera angle\n"							\
-	"(Mouse control will hide the cursor until 'C' is pressed again)\n"		\
-	"\n"																	\
-	"Simulation controls:\n"												\
-	"'0': Reset simulation to the cube\n"									\
-	"'1': Reset simulation to the sphere\n"									\
-	"\n"																	\
-	"Mass commands:\n"														\
-	"'M': Toggle mass activity\n"											\
-	"'+': Increase gravitational pull\n"									\
-	"'-': Decrease gravitational pull (becomes a push after 0 threshold)\n" \
-	"'U': Increase X rotation angle for particles\n"						\
-	"'I': Increase Y rotation angle for particles\n"						\
-	"'O': Increase Z rotation angle for particles\n"						\
-	"'J': Decrease X rotation angle for particles\n"						\
-	"'K': Decrease Y rotation angle for particles\n"						\
-	"'L': Decrease Z rotation angle for particles\n"						\
-	"'T': Reset rotation angle to default (0, 1, 0)\n"						\
-	"'F': Toggle mass follow on cursor (follows screen center if mouse control is active)"
-
-
-
-#define W_WIDTH 1440
-#define W_HEIGHT 1080
+#include "camera.hpp"
+#include "define.hpp"
 
 namespace psys {
-	struct vec3 {
-		float x, y, z;
-
-		vec3(float x = 0.0, float y = 0.0, float z = 0.0) : x(x), y(y), z(z) {}
-	};
-	struct vec4 {
-		float x, y, z, w;
-
-		vec4(float x = 0.0, float y = 0.0, float z = 0.0, float w = 0.0) : x(x), y(y), z(z), w(w) {}
-	};
-
 	struct float3 {
 		float x, y, z;
-	};
-
-	struct vec2 {
-		float x, y;
-
-		vec2(float x = 0.0, float y = 0.0) : x(x), y(y) {}
 	};
 
 	struct Color {
@@ -163,7 +112,10 @@ namespace psys {
 		CUBE
 	};
 
-	class particle_system {
+	class Camera;
+
+	class particle_system
+	{
 		public:
 			particle_system(const size_t &nbParticles);
 			~particle_system();
@@ -191,7 +143,32 @@ namespace psys {
 
 			//Exit functions
 			bool freeCLdata(bool err, const std::string &err_msg = "");
+			void run();
 
+		private:
+			int initGLFW();
+
+			// Event hook actions
+			void keyAction(int key, int scancode, int action, int mods);
+			void mouseAction(double x, double y);
+			void reshapeAction(int width, int height);
+
+			// Event hook callbacks
+			static void reshape(GLFWwindow* window, int width, int height); 
+			static void keyPress(GLFWwindow* window, int key, int scancode, int action, int mods);
+			static void mouseCallback(GLFWwindow* window, double x, double y);
+			void update();
+			void updateParticles();
+			void updateMovement();
+			void findMoveRotationSpeed();
+			void display();
+			void renderParticles();
+			void calculateFps();
+
+			void initData();
+			bool initGlew();
+
+		public:
 			// OpenCL data
 			cl_int err;
 			cl_context context;
@@ -210,17 +187,41 @@ namespace psys {
 
 			// OpenGL data
 			GLuint particleBufferGL;
-			
+
+			// Window data		
+			int windowHeight;
+			int windowWidth;
+			GLFWwindow* _window;
 			// Useful simulation data
 			bool resetSim;
 			bool massFollow;
 			bool massDisplay;
-			int windowHeight;
-			int windowWidth;
-			vec2 mousePos;
 			particleShape reset_shape;
 			size_t nb_particles;
 			size_t particleBufferSize;
 			mass m;
+
+			glm::mat4 projectionMatrix;
+			Camera camera;
+
+			// Keys states and runtime booleans
+			bool keyStates[348];
+			bool ignoreMouseEvent;
+			bool mouseCaptureToggle;
+
+			// Player speed
+			float moveSpeed;
+			float rotationSpeed;
+
+			// FPS counter
+			int frameCount;
+			double lastFrameTime;
+			double currentFrameTime;
+			double fps;
+
+			// Simulation time
+			std::chrono::steady_clock::time_point start;
+			std::chrono::steady_clock::time_point end;
+			std::chrono::milliseconds delta;
 	};
 };

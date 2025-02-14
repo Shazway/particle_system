@@ -6,27 +6,377 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2024/10/25 01:15:47 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/02/14 22:39:06 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "particle_system.hpp"
 
 namespace psys {
-	particle_system::particle_system(const size_t &nbParticles) : nb_particles(nbParticles) {
+	particle_system::particle_system(const size_t &nbParticles) : nb_particles(nbParticles)
+	{
 		std::cout << "Starting particle system with: " << nb_particles << " particles" << std::endl;
-		resetSim = false;
-		reset_shape = particleShape::CUBE;
-		massFollow = false;
-		massDisplay = true;
-		windowHeight = (int)W_HEIGHT;
-		windowWidth = (int)W_WIDTH;
 		initSimData();
+		initGLFW();
+		initGlew();
+		reshapeAction(windowWidth, windowHeight);
 	}
 
-	particle_system::~particle_system() {
+	particle_system::~particle_system()
+	{
 		freeCLdata(false);
 	}
+
+	bool particle_system::initGlew()
+	{
+		GLenum err = glewInit();
+		if (err != GLEW_OK)
+		{
+			std::cerr << "Error initializing GLEW" << glewGetErrorString(err) << std::endl;
+			return false;
+		}
+		return true;
+	}
+
+	void particle_system::initData()
+	{
+		// Keys states and runtime booleans
+		bzero(keyStates, sizeof(keyStates));
+		ignoreMouseEvent	= IGNORE_MOUSE;
+		mouseCaptureToggle	= CAPTURE_MOUSE;
+
+		// Window size
+		windowHeight	= W_HEIGHT;
+		windowWidth		= W_WIDTH;
+
+		// FPS counter
+		frameCount			= 0;
+		lastFrameTime		= 0.0;
+		currentFrameTime	= 0.0;
+		fps					= 0.0;
+
+		// Player data
+		moveSpeed		= 0.0;
+		rotationSpeed	= 0.0;
+	}
+
+	void particle_system::run()
+	{
+		// Main loop
+		while (!glfwWindowShouldClose(_window))
+		{
+			glClear(GL_COLOR_BUFFER_BIT);
+			update();
+			glfwPollEvents();
+		}
+	}
+
+	void particle_system::findMoveRotationSpeed()
+	{
+		// Calculate delta time
+		static auto lastTime = std::chrono::steady_clock::now();
+		auto currentTime = std::chrono::steady_clock::now();
+		std::chrono::duration<float> elapsedTime = currentTime - lastTime;
+		float deltaTime = std::min(elapsedTime.count(), 0.1f);
+		lastTime = currentTime;
+
+
+		// Apply delta to rotation and movespeed
+		if (keyStates[GLFW_KEY_LEFT_CONTROL])
+			moveSpeed = (MOVEMENT_SPEED * 2.0) * deltaTime;
+		else
+			moveSpeed = MOVEMENT_SPEED * deltaTime;
+		rotationSpeed = (ROTATION_SPEED - 1.5) * deltaTime;
+		start = std::chrono::steady_clock::now();
+	}
+
+	void particle_system::updateMovement()
+	{
+		// Camera movement with keys
+		if (keyStates[GLFW_KEY_W]) camera.move(moveSpeed, 0.0, 0.0);
+		if (keyStates[GLFW_KEY_A]) camera.move(0.0, moveSpeed, 0.0);
+		if (keyStates[GLFW_KEY_S]) camera.move(-moveSpeed, 0.0, 0.0);
+		if (keyStates[GLFW_KEY_D]) camera.move(0.0, -moveSpeed, 0.0);
+		if (keyStates[GLFW_KEY_SPACE]) camera.move(0.0, 0.0, -moveSpeed);
+		if (keyStates[GLFW_KEY_LEFT_SHIFT]) camera.move(0.0, 0.0, moveSpeed);
+
+		// Camera rotation with keys
+		if (keyStates[GLFW_KEY_UP]) camera.rotate(0.0f, -1.0f, rotationSpeed * 150.0f);
+		if (keyStates[GLFW_KEY_DOWN]) camera.rotate(0.0f, 1.0f, rotationSpeed * 150.0f);
+		if (keyStates[GLFW_KEY_RIGHT]) camera.rotate(1.0f, 0.0f, rotationSpeed * 150.0f);
+		if (keyStates[GLFW_KEY_LEFT]) camera.rotate(-1.0f, 0.0f, rotationSpeed * 150.0f);
+	}
+
+	void particle_system::updateParticles()
+	{
+		if (resetSim) {
+			resetSimulation();
+			camera.reset();
+		}
+		else
+			enqueueUpdateParticles();
+		return ;
+	}
+
+	void particle_system::renderParticles()
+	{
+		glBindBuffer(GL_ARRAY_BUFFER, particleBufferGL);
+
+		// Enables vertex array for position of particles
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glVertexPointer(3, GL_FLOAT, sizeof(particle), (void *)offsetof(particle, pos));
+
+		// Enables color array for colors
+		glEnableClientState(GL_COLOR_ARRAY);
+		glColorPointer(3, GL_FLOAT, sizeof(particle), (void *)offsetof(particle, color));
+
+		// Draw final result
+		glDrawArrays(GL_POINTS, 0, nb_particles);
+
+		// Release arrays and buffer
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState(GL_COLOR_ARRAY);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// Render mass point as a sphere
+		if (massDisplay)
+		{
+			glPushMatrix();
+			glTranslatef(m.pos.x, m.pos.y, m.pos.z);
+			glColor3f(1.0f, 1.0f, 1.0f);
+			GLUquadric* quad = gluNewQuadric();
+			gluSphere(quad, m.radius / 10, 20, 20);
+			gluDeleteQuadric(quad);
+			glPopMatrix();
+		}
+	}
+
+	void particle_system::calculateFps()
+	{
+		frameCount++;
+		currentFrameTime = glfwGetTime();
+
+		double timeInterval = currentFrameTime - lastFrameTime;
+
+		if (timeInterval > 1)
+		{
+			fps = frameCount / timeInterval;
+
+			lastFrameTime = currentFrameTime;
+			frameCount = 0;
+
+			std::stringstream title;
+			title << "Not ft_minecraft | FPS: " << fps;
+			glfwSetWindowTitle(_window, title.str().c_str());
+		}
+	}
+
+	void particle_system::display()
+	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glMatrixMode(GL_MODELVIEW);
+
+		float radY, radX;
+		radX = camera.getAngles().x * (M_PI / 180.0);
+		radY = camera.getAngles().y * (M_PI / 180.0);
+
+		glm::mat4 viewMatrix = glm::lookAt(
+			camera.getPosition(),		// cam position
+			camera.getCenter(),			// Look-at point
+			glm::vec3(0.0f, 1.0f, 0.0f)	// Up direction
+		);
+
+		viewMatrix = glm::mat4(1.0f);
+		viewMatrix = glm::rotate(viewMatrix, radY, glm::vec3(-1.0f, 0.0f, 0.0f));
+		viewMatrix = glm::rotate(viewMatrix, radX, glm::vec3(0.0f, -1.0f, 0.0f));
+		viewMatrix = glm::translate(viewMatrix, glm::vec3(camera.getPosition()));
+		glLoadMatrixf(glm::value_ptr(viewMatrix));
+
+		// Update the size
+		update_window_size(windowWidth, windowHeight);
+
+		// Update the mass position to the cursor in space
+		if (massFollow)
+			update_mass_position(projectionMatrix, viewMatrix);
+
+		// Call update kernel
+		updateParticles();
+		
+		// Draw particles
+		renderParticles();
+		calculateFps();
+		glfwSwapBuffers(_window);
+	}
+
+	void particle_system::update()
+	{
+		// Check for delta and apply to move and rotation speeds
+		findMoveRotationSpeed();
+
+		// Update player position and orientation
+		updateMovement();
+
+		// Mass control
+		// Increase tangent vector rotation in x, y z respectively
+		if (keyStates[GLFW_KEY_U])
+			update_mass_tangent(0.1f, 0.0f, 0.0f);
+		if (keyStates[GLFW_KEY_I])
+			update_mass_tangent(0.0f, 0.1f, 0.0f);
+		if (keyStates[GLFW_KEY_O])
+			update_mass_tangent(0.0f, 0.0f, 0.1f);
+		// Decrease tangent vector rotation in x, y z respectively
+		if (keyStates[GLFW_KEY_J])
+			update_mass_tangent(-0.1f, 0.0f, 0.0f);
+		if (keyStates[GLFW_KEY_K])
+			update_mass_tangent(0.0f, -0.1f, 0.0f);
+		if (keyStates[GLFW_KEY_L])
+			update_mass_tangent(0.0f, 0.0f, -0.1f);
+		if (keyStates[GLFW_KEY_KP_ADD]) m.intensity += 0.1f;
+		if (keyStates[GLFW_KEY_KP_SUBTRACT]) m.intensity -= 0.1f;
+
+		display();
+
+		// Register end of frame for the next delta
+		end = std::chrono::steady_clock::now(); 
+		delta = std::chrono::duration_cast<std::chrono::milliseconds>(start - end);
+	}
+
+	int particle_system::initGLFW()
+	{
+		_window = glfwCreateWindow(windowWidth, windowHeight, "particle_system | FPS: 0", NULL, NULL);
+		if (!_window)
+		{
+			std::cerr << "Failed to create GLFW window" << std::endl;
+			glfwTerminate();
+			return 0;
+		}
+		glfwSetWindowUserPointer(_window, this);
+		glfwSetFramebufferSizeCallback(_window, reshape);
+		glfwSetKeyCallback(_window, keyPress);
+		glfwSetCursorPosCallback(_window, mouseCallback);
+		glfwMakeContextCurrent(_window);
+		glfwSwapInterval(0);
+		return 1;
+	}
+
+	void particle_system::keyAction(int key, int scancode, int action, int mods)
+	{
+		(void)scancode;
+		(void)mods;
+
+		if (action == GLFW_PRESS)
+			keyStates[key] = true;
+		else if (action == GLFW_RELEASE)
+			keyStates[key] = false;
+
+		if (action == GLFW_PRESS && ((key == GLFW_KEY_M || key == GLFW_KEY_SEMICOLON) && m.intensity))
+			m.intensity = 0.0f;
+		else if (action == GLFW_PRESS && ((key == GLFW_KEY_M || key == GLFW_KEY_SEMICOLON) && !m.intensity))
+			m.intensity = 10.0f;
+		if (action == GLFW_PRESS && key == GLFW_KEY_KP_0)
+		{
+			reset_shape = particleShape::CUBE;
+			resetSim = true;
+		}
+		else if (action == GLFW_PRESS && key == GLFW_KEY_KP_1)
+		{
+			reset_shape = particleShape::SPHERE;
+			resetSim = true;
+		}
+		else if (action == GLFW_PRESS && key == GLFW_KEY_T)
+			m.rotationTangent = {0.0f, 1.0f, 0.0f};
+		else if (action == GLFW_PRESS && key == GLFW_KEY_F)
+			massFollow = !massFollow;
+		else if (action == GLFW_PRESS && key == GLFW_KEY_P)
+			massDisplay = !massDisplay;
+		else if (action == GLFW_PRESS && key == GLFW_KEY_H)
+			std::cout << COMMANDS_LIST << std::endl;
+		else if (action == GLFW_PRESS && key == GLFW_KEY_C)
+			mouseCaptureToggle = !mouseCaptureToggle;
+		else if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
+			glfwSetWindowShouldClose(_window, GL_TRUE);
+	}
+
+	void particle_system::keyPress(GLFWwindow* window, int key, int scancode, int action, int mods)
+	{
+		particle_system *engine = static_cast<particle_system*>(glfwGetWindowUserPointer(window));
+
+		if (engine) engine->keyAction(key, scancode, action, mods);
+	}
+
+	void particle_system::reshapeAction(int width, int height)
+	{
+		glViewport(0, 0, width, height);
+
+		// Apply projection matrix operations
+		glMatrixMode(GL_PROJECTION);
+
+		// Load identity matrix
+		projectionMatrix = glm::mat4(1.0f);
+		projectionMatrix = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 1.0f, 1000.0f);
+		glLoadMatrixf(glm::value_ptr(projectionMatrix));
+	}
+
+	void particle_system::reshape(GLFWwindow* window, int width, int height)
+	{
+		particle_system *engine = static_cast<particle_system*>(glfwGetWindowUserPointer(window));
+
+		if (engine) engine->reshapeAction(width, height);
+	}
+
+
+	void particle_system::mouseAction(double x, double y)
+	{
+		if (!mouseCaptureToggle)
+		{
+			glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			return ;
+		}
+		static bool firstMouse = true;
+		static double lastX = 0, lastY = 0;
+
+		// Get the current window size dynamically
+		int windowWidth, windowHeight;
+		glfwGetWindowSize(_window, &windowWidth, &windowHeight);
+		glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+		camera.updateMousePos(x, y);
+
+		int windowCenterX = windowWidth / 2;
+		int windowCenterY = windowHeight / 2;
+
+		if (firstMouse || ignoreMouseEvent)
+		{
+			lastX = windowCenterX;
+			lastY = windowCenterY;
+			firstMouse = false;
+			ignoreMouseEvent = false;
+			return;
+		}
+
+		float xOffset = lastX - x;
+		float yOffset = lastY - y;
+
+		lastX = x;
+		lastY = y;
+
+		float sensitivity = 0.05f;
+		xOffset *= sensitivity;
+		yOffset *= sensitivity;
+
+		camera.rotate(1.0f, 0.0f, xOffset * ROTATION_SPEED);
+		camera.rotate(0.0f, 1.0f, yOffset * ROTATION_SPEED);
+		ignoreMouseEvent = true;
+		glfwSetCursorPos(_window, windowCenterX, windowCenterY);
+	}
+
+	void particle_system::mouseCallback(GLFWwindow* window, double x, double y)
+	{
+		particle_system *engine = static_cast<particle_system*>(glfwGetWindowUserPointer(window));
+
+		if (engine) engine->mouseAction(x, y);
+	}
+
 
 	/*
 		Initialises simulation data
@@ -52,15 +402,43 @@ namespace psys {
 		m.rotationTangent.x = 0.0f;
 		m.rotationTangent.y = 1.0f;
 		m.rotationTangent.z = 0.0f;
-	}
 
-	/*
-		Updates the mouse position
-	*/
-	void particle_system::update_mouse_pos(int x, int y)
-	{
-		mousePos.x = static_cast<float>(x);
-		mousePos.y = static_cast<float>(y);
+		// Window data
+		windowHeight = (int)W_HEIGHT;
+		windowWidth = (int)W_WIDTH;
+		
+		// Reset data
+		resetSim = false;
+		reset_shape = particleShape::CUBE;
+
+		// Mass toggles
+		massFollow = false;
+		massDisplay = true;
+		resetSim = false;
+		reset_shape = particleShape::CUBE;
+		massFollow = false;
+		massDisplay = true;
+		windowHeight = (int)W_HEIGHT;
+		windowWidth = (int)W_WIDTH;
+
+		// Keys states and runtime booleans()
+		bzero(keyStates, sizeof(keyStates));
+		ignoreMouseEvent	= IGNORE_MOUSE;
+		mouseCaptureToggle	= CAPTURE_MOUSE;
+
+		// Window size
+		windowHeight	= W_HEIGHT;
+		windowWidth		= W_WIDTH;
+
+		// FPS counter
+		frameCount			= 0;
+		lastFrameTime		= 0.0;
+		currentFrameTime	= 0.0;
+		fps					= 0.0;
+
+		// Player data
+		moveSpeed		= 0.0;
+		rotationSpeed	= 0.0;
 	}
 
 	/*
@@ -90,8 +468,8 @@ namespace psys {
 	void particle_system::update_mass_position(glm::mat4 projectionMatrix, glm::mat4 viewMatrix)
 	{
 		// Normalized Dimension coordinates
-		float xNDC = (2.0f * mousePos.x) / windowWidth - 1.0f;
-		float yNDC = 1.0f - (2.0f * mousePos.y) / windowHeight;
+		float xNDC = (2.0f * camera.mousePos.x) / windowWidth - 1.0f;
+		float yNDC = 1.0f - (2.0f * camera.mousePos.y) / windowHeight;
 		float zNDC = 0.75f;
 
 		glm::vec4 mouseClipCoords = glm::vec4(xNDC, yNDC, zNDC, 1.0f);
@@ -228,7 +606,10 @@ namespace psys {
 	bool particle_system::initSharedBufferData() {
 		std::cout << "Initialising OpenGL/OpenCL shared buffer" << std::endl;
 		// Generate OpenGL buffer
+		std::cout << "Gen" << std::endl;
+		std::cout << glGetString(GL_VERSION) << std::endl;
 		glGenBuffers(1, &particleBufferGL);
+		std::cout << "Bind" << std::endl;
 		glBindBuffer(GL_ARRAY_BUFFER, particleBufferGL);
 
 		// Allocate space for particles in the OpenGL buffer
