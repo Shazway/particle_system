@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/02/14 21:29:45 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/02/14 22:49:34 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,6 @@ int main()
 		return -1;
 	}
 	particle_system particle_sys(particle_number);
-	particle_sys.initSharedBufferData();
 	if (!particle_sys.initCLdata())
 		return 1;
 	std::cout << std::endl;

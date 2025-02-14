@@ -6,20 +6,24 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/02/14 22:47:13 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/02/14 22:57:53 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "particle_system.hpp"
 
-namespace psys {
+namespace psys
+{
 	particle_system::particle_system(const size_t &nbParticles) : nb_particles(nbParticles)
 	{
 		std::cout << "Starting particle system with: " << nb_particles << " particles" << std::endl;
+
 		initSimData();
+		reset_shape = particleShape::CUBE;
 		initGLFW();
 		initGlew();
 		reshapeAction(windowWidth, windowHeight);
+		initSharedBufferData();
 	}
 
 	particle_system::~particle_system()
@@ -410,13 +414,10 @@ namespace psys {
 		
 		// Reset data
 		resetSim = false;
-		reset_shape = particleShape::CUBE;
 
 		// Mass toggles
 		massFollow = false;
 		massDisplay = true;
-		resetSim = false;
-		reset_shape = particleShape::CUBE;
 		massFollow = false;
 		massDisplay = true;
 		windowHeight = (int)W_HEIGHT;
@@ -487,7 +488,7 @@ namespace psys {
 	void particle_system::resetSimulation() {
 		if (reset_shape == particleShape::CUBE)
 			std::cout << "Resetting the simulation back to a cube of size: " << cubeSize << std::endl;
-		if (reset_shape == particleShape::SPHERE)
+		else if (reset_shape == particleShape::SPHERE)
 			std::cout << "Resetting the simulation back to a sphere of radius: " << sphereRadius << std::endl;
 		freeCLdata(false);
 		initSimData();

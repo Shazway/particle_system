@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/02/14 22:11:26 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/02/14 22:50:21 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -122,6 +122,8 @@ namespace psys {
 
 			//Init functions
 			bool initCLdata();
+			void run();
+		private:
 			bool initContext();
 			void initSimData();
 			bool initQueue();
@@ -143,9 +145,7 @@ namespace psys {
 
 			//Exit functions
 			bool freeCLdata(bool err, const std::string &err_msg = "");
-			void run();
 
-		private:
 			int initGLFW();
 
 			// Event hook actions
@@ -168,7 +168,7 @@ namespace psys {
 			void initData();
 			bool initGlew();
 
-		public:
+		private:
 			// OpenCL data
 			cl_int err;
 			cl_context context;
