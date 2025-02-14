@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/02/14 22:39:06 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/02/14 22:47:13 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -330,6 +330,7 @@ namespace psys {
 		if (!mouseCaptureToggle)
 		{
 			glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			camera.updateMousePos(x, y);
 			return ;
 		}
 		static bool firstMouse = true;
