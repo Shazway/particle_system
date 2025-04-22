@@ -33,4 +33,5 @@ Mass commands:
 'K'	: Decrease Y rotation angle for particles  
 'L'	: Decrease Z rotation angle for particles  
 'T'	: Reset rotation angle to default x, y, z(0, 1, 0)  
-'F'	: Toggle mass follow on cursor (will follow the center of the screen if mouse control is active)  
+'F'	: Toggle mass follow on cursor (will follow the center of the screen if mouse control is active) 
+'P'	: Toggle mass visibility on screen (white sphere)  
