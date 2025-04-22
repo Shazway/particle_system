@@ -14,7 +14,8 @@ SRC_PATH	=	srcs/
 INCLUDES	=	-Iincludes
 SRC_NAME	=	main.cpp			\
 				camera.cpp			\
-				particle_system.cpp
+				particle_system.cpp	\
+				shader.cpp
 
 OBJ_NAME	=	$(SRC_NAME:.cpp=.o)
 OBJ		=	$(addprefix $(OBJ_PATH), $(OBJ_NAME))

@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/02/14 22:57:53 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/04/22 14:23:46 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ namespace psys
 		initGlew();
 		reshapeAction(windowWidth, windowHeight);
 		initSharedBufferData();
+		initShaders();
 	}
 
 	particle_system::~particle_system()
@@ -122,27 +123,27 @@ namespace psys
 		return ;
 	}
 
-	void particle_system::renderParticles()
+	void particle_system::renderParticles(glm::mat4 &viewMatrix)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER, particleBufferGL);
+		// Use your compiled shader
+		glEnable(GL_DEPTH_TEST);
+		glUseProgram(shaderProgram);
 
-		// Enables vertex array for position of particles
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glVertexPointer(3, GL_FLOAT, sizeof(particle), (void *)offsetof(particle, pos));
+		// Set the view-projection matrix uniform
+		GLint vpLoc = glGetUniformLocation(shaderProgram, "viewMatrix");
+		glUniformMatrix4fv(vpLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix * viewMatrix));
 
-		// Enables color array for colors
-		glEnableClientState(GL_COLOR_ARRAY);
-		glColorPointer(3, GL_FLOAT, sizeof(particle), (void *)offsetof(particle, color));
+		// Bind the VAO (already describes VBO + attributes)
+		glBindVertexArray(vao);
 
-		// Draw final result
+		// Draw all particles as GL_POINTS
 		glDrawArrays(GL_POINTS, 0, nb_particles);
 
-		// Release arrays and buffer
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		// Unbind VAO and shader
+		glBindVertexArray(0);
+		glUseProgram(0);
 
-		// Render mass point as a sphere
+		// Render the mass point (legacy pipeline is fine here)
 		if (massDisplay)
 		{
 			glPushMatrix();
@@ -207,7 +208,7 @@ namespace psys
 		updateParticles();
 		
 		// Draw particles
-		renderParticles();
+		renderParticles(viewMatrix);
 		calculateFps();
 		glfwSwapBuffers(_window);
 	}
@@ -602,16 +603,39 @@ namespace psys
 	}
 
 	/*
+		Initialises vertex array and vertex buffer objects
+		Initialises the vertex and fragment shaders
+	*/
+	void particle_system::initShaders()
+	{
+		// OpenGL VAO/VBO setup
+		glBindVertexArray(vao);
+		glBindBuffer(GL_ARRAY_BUFFER, particleBufferGL);
+
+		// Position
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(particle), (void*)offsetof(particle, pos));
+
+		// Colors
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(particle), (void*)offsetof(particle, color));
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+		// Vertex and Fragment shader setup
+		shaderProgram = createShaderProgram("shaders/particle.vert", "shaders/particle.frag");
+	}
+
+	/*
 		Initialises and allocates the CL/GL shared buffer
 		on the VRAM and checks for errors
 	*/
 	bool particle_system::initSharedBufferData() {
 		std::cout << "Initialising OpenGL/OpenCL shared buffer" << std::endl;
 		// Generate OpenGL buffer
-		std::cout << "Gen" << std::endl;
 		std::cout << glGetString(GL_VERSION) << std::endl;
 		glGenBuffers(1, &particleBufferGL);
-		std::cout << "Bind" << std::endl;
 		glBindBuffer(GL_ARRAY_BUFFER, particleBufferGL);
 
 		// Allocate space for particles in the OpenGL buffer

@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/02/14 22:50:21 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/04/22 14:07:35 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,6 +130,7 @@ namespace psys {
 			bool initPrograms();
 			bool initKernels();
 			bool initSharedBufferData();
+			void initShaders();
 			const char *get_CL_program(const std::string &path);
 			bool selectDevice();
 
@@ -141,7 +142,6 @@ namespace psys {
 			void update_mass_tangent(float x, float y, float z);
 			void update_mass_position(glm::mat4 projectionMatrix, glm::mat4 viewMatrix);
 			void update_window_size(int height, int width);
-			void update_mouse_pos(int x, int y);
 
 			//Exit functions
 			bool freeCLdata(bool err, const std::string &err_msg = "");
@@ -162,14 +162,14 @@ namespace psys {
 			void updateMovement();
 			void findMoveRotationSpeed();
 			void display();
-			void renderParticles();
+			void renderParticles(glm::mat4 &viewMatrix);
 			void calculateFps();
 
 			void initData();
 			bool initGlew();
 
 		private:
-			// OpenCL data
+			// OpenCL
 			cl_int err;
 			cl_context context;
 			cl_command_queue queue;
@@ -185,14 +185,17 @@ namespace psys {
 			cl_uint num_devices;
 			cl_mem particleBufferCL;
 
-			// OpenGL data
+			// OpenGL
 			GLuint particleBufferGL;
+			GLuint vao;
+			GLuint shaderProgram;
 
-			// Window data		
+			// Window		
 			int windowHeight;
 			int windowWidth;
 			GLFWwindow* _window;
-			// Useful simulation data
+
+			// Useful simulation
 			bool resetSim;
 			bool massFollow;
 			bool massDisplay;
@@ -201,6 +204,7 @@ namespace psys {
 			size_t particleBufferSize;
 			mass m;
 
+			// Camera and view
 			glm::mat4 projectionMatrix;
 			Camera camera;
 
@@ -225,3 +229,6 @@ namespace psys {
 			std::chrono::milliseconds delta;
 	};
 };
+
+GLuint compileShader(const char* filePath, GLenum shaderType);
+GLuint createShaderProgram(const char* vertexShaderPath, const char* fragmentShaderPath);

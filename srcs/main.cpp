@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/02/14 22:49:34 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/04/22 14:24:09 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 using namespace psys;
 
 // Constants
-const size_t particle_number = 3000000; 
+const size_t particle_number = 10000000; 
 const float mouse_sensitivity = 0.05f;
 
 int main()
