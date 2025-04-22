@@ -39,5 +39,7 @@
 	"'K': Decrease Y rotation angle for particles\n"						\
 	"'L': Decrease Z rotation angle for particles\n"						\
 	"'T': Reset rotation angle to default (0, 1, 0)\n"						\
-	"'F': Toggle mass follow on cursor (follows screen center if mouse control is active)"
+	"'F': Toggle mass follow on cursor (follows screen center if mouse control is active)\n"	\
+	"'P': Toggle mass visibility on screen (white sphere)\n"
+
 
