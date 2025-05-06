@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/04/22 14:07:35 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/04/23 14:39:37 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,7 +40,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <GLFW/glfw3.h>
-
 #include "camera.hpp"
 #include "define.hpp"
 

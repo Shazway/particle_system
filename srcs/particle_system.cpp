@@ -6,11 +6,12 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/04/22 14:23:46 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/04/23 14:40:39 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "particle_system.hpp"
+#include "cl_ext_loader.hpp"
 
 namespace psys
 {
@@ -704,6 +705,7 @@ namespace psys
 		err = clGetPlatformIDs(0, nullptr, &num_platforms);
 		if (err != CL_SUCCESS || num_platforms == 0)
 			return freeCLdata(true, PLATFORM_ID_ERR);
+
 		std::vector<cl_platform_id> platforms(num_platforms);
 		err = clGetPlatformIDs(num_platforms, platforms.data(), nullptr);
 		if (err != CL_SUCCESS)
@@ -813,7 +815,7 @@ namespace psys
 		}
 
 		// Checking context info for errors
-		err = clGetGLContextInfoKHR(properties, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, sizeof(selected_platform), &selected_platform, nullptr);
+		err = clGetGLContextInfoKHR_safe(properties, CL_CURRENT_DEVICE_FOR_GL_CONTEXT_KHR, sizeof(selected_platform), &selected_platform, nullptr);
 		if (err != CL_SUCCESS) {
 			std::cerr << "Error: Failed to get OpenCL device: " << err << std::endl;
 			return freeCLdata(true, "");

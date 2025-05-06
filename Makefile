@@ -1,9 +1,9 @@
 NAME		=	particle_system
 DEBUG_NAME	=	particle_systemDebug
 
-LDFLAGS =	-lGL -lGLU -lglfw -lOpenCL -lGLEW -lX11
+LDFLAGS =	-lGL -lGLU -lglfw -Llib64 -lGLEW -lX11 -lOpenCL
 
-CFLAGS	=	-Wall -Wextra -Werror -O2 -g3
+CFLAGS	=	-Wall -Wextra -Werror -std=c++17 -O3 -g3
 DEBUG_CFLAGS	=	-DNDEBUG -Wall -Wextra -Werror -O2 -g3
 
 OBJ_PATH		=	obj/
@@ -11,7 +11,7 @@ DEBUG_OBJ_PATH		=	debug_obj/
 
 CC			=	g++
 SRC_PATH	=	srcs/
-INCLUDES	=	-Iincludes
+INCLUDES	=	-Iincludes -Iglm -ICL
 SRC_NAME	=	main.cpp			\
 				camera.cpp			\
 				particle_system.cpp	\
