@@ -14,6 +14,7 @@ typedef struct {
 	vec3 pos;
 	vec3 velocity;
 	color color;
+	vec3 pos_prev;
 } particle;
 
 typedef struct {
@@ -28,6 +29,9 @@ __kernel void updateParticles(__global particle *particles, mass m) {
 	const float deltaTime = 0.008f;
 	const float decayFactor = 0.995f;
 	particle p = particles[id];
+
+	// Save the current position as the previous one for trailing
+	particles[id].pos_prev = particles[id].pos;
 
 	vec3 direction;
 	direction.x = m.position.x - particles[id].pos.x;

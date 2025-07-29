@@ -10,6 +10,7 @@ typedef struct {
 	vec3 pos;
 	vec3 velocity;
 	color color;
+	vec3 pos_prev;
 } particle;
 
 float fract(float value) {

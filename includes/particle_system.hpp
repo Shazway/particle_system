@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/04/23 14:39:37 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/07/29 17:00:00 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -97,6 +97,7 @@ namespace psys {
 		float3 pos;
 		float3 velocity;
 		float3 color;
+		float3 pos_prev;
 	};
 
 	struct mass {

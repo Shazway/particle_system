@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/04/23 14:40:39 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/07/29 16:15:05 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -718,7 +718,7 @@ namespace psys
 			err = clGetDeviceIDs(platId, CL_DEVICE_TYPE_GPU, 0, nullptr, &num_devices);
 			if (err != CL_SUCCESS || num_devices == 0)
 			{
-				std::cerr << "No GPU on this platform" << i + 1 << std::endl;
+				std::cerr << "No GPU on this platform " << i + 1 << std::endl;
 				continue ;
 			}
 
