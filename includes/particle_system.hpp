@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/07/29 17:00:00 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/07/31 21:41:14 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -189,6 +189,7 @@ namespace psys {
 			GLuint particleBufferGL;
 			GLuint vao;
 			GLuint shaderProgram;
+			GLuint spaghettiShaderProgram;
 
 			// Window		
 			int windowHeight;
@@ -199,6 +200,7 @@ namespace psys {
 			bool resetSim;
 			bool massFollow;
 			bool massDisplay;
+			bool spaghettiMode;
 			particleShape reset_shape;
 			size_t nb_particles;
 			size_t particleBufferSize;
@@ -231,4 +233,4 @@ namespace psys {
 };
 
 GLuint compileShader(const char* filePath, GLenum shaderType);
-GLuint createShaderProgram(const char* vertexShaderPath, const char* fragmentShaderPath);
+GLuint createShaderProgram(const char* vertexShaderPath, const char* fragmentShaderPath, const char* geometryShaderPath);

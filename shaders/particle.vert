@@ -5,7 +5,7 @@ layout(location = 1) in vec3 in_color;
 layout(location = 2) in vec3 in_pos_prev;
 
 uniform mat4 viewMatrix;
-out vec3 frag_color;
+out vec4 frag_color;
 
 out VS_OUT {
 	vec3 pos_curr;
@@ -15,7 +15,7 @@ out VS_OUT {
 
 void main()
 {
-	vs_out.pos_curr = pos_curr;
-	vs_out.color = color;
-	vs_out.pos_prev = pos_prev;
+	vs_out.pos_curr = in_pos;
+	vs_out.color = in_color;
+	vs_out.pos_prev = in_pos_prev;
 }

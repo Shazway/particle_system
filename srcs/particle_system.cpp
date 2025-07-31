@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/07/29 16:15:05 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/07/31 22:34:33 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -123,39 +123,51 @@ namespace psys
 			enqueueUpdateParticles();
 		return ;
 	}
-
-	void particle_system::renderParticles(glm::mat4 &viewMatrix)
+	void particle_system::renderParticles(glm::mat4& viewMatrix)
 	{
-		// Use your compiled shader
+		// Activate shader
 		glEnable(GL_DEPTH_TEST);
-		glUseProgram(shaderProgram);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		GLuint activeShader = spaghettiMode == true ? spaghettiShaderProgram : shaderProgram;
+		glUseProgram(activeShader);
 
 		// Set the view-projection matrix uniform
-		GLint vpLoc = glGetUniformLocation(shaderProgram, "viewMatrix");
-		glUniformMatrix4fv(vpLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix * viewMatrix));
+		glm::mat4 viewProj = projectionMatrix * viewMatrix;
+		GLint vpLoc = glGetUniformLocation(activeShader, "u_viewProj");
+		glUniformMatrix4fv(vpLoc, 1, GL_FALSE, glm::value_ptr(viewProj));
 
-		// Bind the VAO (already describes VBO + attributes)
+		// Bind the VAO
 		glBindVertexArray(vao);
 
-		// Draw all particles as GL_POINTS
-		glDrawArrays(GL_POINTS, 0, nb_particles);
-
-		// Unbind VAO and shader
+		if (spaghettiMode && nb_particles >= 1024)
+		{
+			glDrawArrays(GL_LINE_STRIP, 0, nb_particles);
+		}
+		else
+		{
+			// Draw each particle as a point
+			glDrawArrays(GL_POINTS, 0, nb_particles);
+		}
+		
+		// Clean up
 		glBindVertexArray(0);
 		glUseProgram(0);
 
-		// Render the mass point (legacy pipeline is fine here)
+		// Render the mass point
 		if (massDisplay)
 		{
 			glPushMatrix();
 			glTranslatef(m.pos.x, m.pos.y, m.pos.z);
-			glColor3f(1.0f, 1.0f, 1.0f);
+			glColor3f(0.0f, 0.0f, 0.0f);
 			GLUquadric* quad = gluNewQuadric();
-			gluSphere(quad, m.radius / 10, 20, 20);
+			gluSphere(quad, m.radius*0.3, 80, 80);
 			gluDeleteQuadric(quad);
 			glPopMatrix();
 		}
 	}
+	
 
 	void particle_system::calculateFps()
 	{
@@ -181,6 +193,7 @@ namespace psys
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glMatrixMode(GL_MODELVIEW);
+		glClearColor(1.0, 1.0, 1.0, 1.0);
 
 		float radY, radX;
 		radX = camera.getAngles().x * (M_PI / 180.0);
@@ -301,6 +314,8 @@ namespace psys
 			mouseCaptureToggle = !mouseCaptureToggle;
 		else if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
 			glfwSetWindowShouldClose(_window, GL_TRUE);
+		else if (action == GLFW_PRESS && key == GLFW_KEY_G)
+			spaghettiMode = !spaghettiMode;
 	}
 
 	void particle_system::keyPress(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -411,28 +426,21 @@ namespace psys
 		m.rotationTangent.z = 0.0f;
 
 		// Window data
-		windowHeight = (int)W_HEIGHT;
-		windowWidth = (int)W_WIDTH;
-		
+		windowHeight = W_HEIGHT;
+		windowWidth = W_WIDTH;
+
 		// Reset data
 		resetSim = false;
 
 		// Mass toggles
 		massFollow = false;
+		spaghettiMode = false;
 		massDisplay = true;
-		massFollow = false;
-		massDisplay = true;
-		windowHeight = (int)W_HEIGHT;
-		windowWidth = (int)W_WIDTH;
 
 		// Keys states and runtime booleans()
 		bzero(keyStates, sizeof(keyStates));
 		ignoreMouseEvent	= IGNORE_MOUSE;
 		mouseCaptureToggle	= CAPTURE_MOUSE;
-
-		// Window size
-		windowHeight	= W_HEIGHT;
-		windowWidth		= W_WIDTH;
 
 		// FPS counter
 		frameCount			= 0;
@@ -621,11 +629,18 @@ namespace psys
 		glEnableVertexAttribArray(1);
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(particle), (void*)offsetof(particle, color));
 
+		// Old position
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(particle), (void*)offsetof(particle, pos_prev));
+
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 
 		// Vertex and Fragment shader setup
-		shaderProgram = createShaderProgram("shaders/particle.vert", "shaders/particle.frag");
+		shaderProgram = createShaderProgram("shaders/particle.vert", "shaders/particle.frag", "shaders/particle.gs");
+
+		// Vertex and Fragment shader setup for spaghetti mode
+		spaghettiShaderProgram = createShaderProgram("shaders/spaghetti.vert", "shaders/spaghetti.frag", "");
 	}
 
 	/*

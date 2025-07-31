@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/25 00:06:10 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/07/29 16:48:07 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/07/31 21:56:59 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 using namespace psys;
 
 // Constants
-const size_t particle_number = 5000000; 
+const size_t particle_number = 1000000; 
 const float mouse_sensitivity = 0.05f;
 
 int main()
@@ -32,5 +32,6 @@ int main()
 	std::cout << "Welcome to particle_system" << std::endl;
 	std::cout << "Press 'H' key to see the list of available commands" << std::endl;
 	particle_sys.run();
+	std::cout << "GL Version: " << glGetString(GL_VERSION) << std::endl;
 	return 0;
 }
