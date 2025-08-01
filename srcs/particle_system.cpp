@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/07/31 22:34:33 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/08/01 02:37:40 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -193,7 +193,7 @@ namespace psys
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glMatrixMode(GL_MODELVIEW);
-		glClearColor(1.0, 1.0, 1.0, 1.0);
+		// glClearColor(1.0, 1.0, 1.0, 1.0);
 
 		float radY, radX;
 		radX = camera.getAngles().x * (M_PI / 180.0);
@@ -328,7 +328,8 @@ namespace psys
 	void particle_system::reshapeAction(int width, int height)
 	{
 		glViewport(0, 0, width, height);
-
+		windowHeight = height;
+		windowWidth = width;
 		// Apply projection matrix operations
 		glMatrixMode(GL_PROJECTION);
 
