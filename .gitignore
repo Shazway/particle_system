@@ -2,3 +2,8 @@
 particle_system
 obj/
 */*.o
+glm/
+includes/GL
+includes/stb_*
+lib64/
+third_party/
