@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 01:04:07 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/07/31 21:41:14 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/12/17 15:56:24 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -214,6 +214,9 @@ namespace psys {
 			bool keyStates[348];
 			bool ignoreMouseEvent;
 			bool mouseCaptureToggle;
+			bool firstMouseInput;
+			double lastMouseX;
+			double lastMouseY;
 
 			// Player speed
 			float moveSpeed;
@@ -223,12 +226,12 @@ namespace psys {
 			int frameCount;
 			double lastFrameTime;
 			double currentFrameTime;
-			double fps;
+			int fps;
 
 			// Simulation time
 			std::chrono::steady_clock::time_point start;
 			std::chrono::steady_clock::time_point end;
-			std::chrono::milliseconds delta;
+			float delta;
 	};
 };
 

@@ -33,6 +33,7 @@ __kernel void init_particles_sphere(__global particle* particles, float radius) 
 	particles[id].pos.x = r * sin(theta) * cos(phi);
 	particles[id].pos.y = r * cos(theta);
 	particles[id].pos.z = r * sin(theta) * sin(phi);
+	particles[id].pos_prev = particles[id].pos;
 
 	// Initialize velocity to zero
 	particles[id].velocity.x = 0.0f;

@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/08/01 02:37:40 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/12/17 15:56:53 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,9 @@ namespace psys
 		bzero(keyStates, sizeof(keyStates));
 		ignoreMouseEvent	= IGNORE_MOUSE;
 		mouseCaptureToggle	= CAPTURE_MOUSE;
+		firstMouseInput		= true;
+		lastMouseX			= 0.0;
+		lastMouseY			= 0.0;
 
 		// Window size
 		windowHeight	= W_HEIGHT;
@@ -59,7 +62,7 @@ namespace psys
 		frameCount			= 0;
 		lastFrameTime		= 0.0;
 		currentFrameTime	= 0.0;
-		fps					= 0.0;
+		fps					= 0;
 
 		// Player data
 		moveSpeed		= 0.0;
@@ -84,8 +87,8 @@ namespace psys
 		auto currentTime = std::chrono::steady_clock::now();
 		std::chrono::duration<float> elapsedTime = currentTime - lastTime;
 		float deltaTime = std::min(elapsedTime.count(), 0.1f);
+		delta = deltaTime; 
 		lastTime = currentTime;
-
 
 		// Apply delta to rotation and movespeed
 		if (keyStates[GLFW_KEY_LEFT_CONTROL])
@@ -174,7 +177,7 @@ namespace psys
 		frameCount++;
 		currentFrameTime = glfwGetTime();
 
-		double timeInterval = currentFrameTime - lastFrameTime;
+		int timeInterval = currentFrameTime - lastFrameTime;
 
 		if (timeInterval > 1)
 		{
@@ -184,7 +187,7 @@ namespace psys
 			frameCount = 0;
 
 			std::stringstream title;
-			title << "Not ft_minecraft | FPS: " << fps;
+			title << "particle_system | FPS: " << fps;
 			glfwSetWindowTitle(_window, title.str().c_str());
 		}
 	}
@@ -254,10 +257,6 @@ namespace psys
 		if (keyStates[GLFW_KEY_KP_SUBTRACT]) m.intensity -= 0.1f;
 
 		display();
-
-		// Register end of frame for the next delta
-		end = std::chrono::steady_clock::now(); 
-		delta = std::chrono::duration_cast<std::chrono::milliseconds>(start - end);
 	}
 
 	int particle_system::initGLFW()
@@ -274,7 +273,22 @@ namespace psys
 		glfwSetKeyCallback(_window, keyPress);
 		glfwSetCursorPosCallback(_window, mouseCallback);
 		glfwMakeContextCurrent(_window);
-		glfwSwapInterval(0);
+
+		// Prefer raw mouse motion if supported for smoother, acceleration-free deltas
+		if (glfwRawMouseMotionSupported())
+			glfwSetInputMode(_window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+		
+		// Place cursor at the window center on launch for consistent initial deltas
+		{
+			int w = 0, h = 0;
+			glfwGetWindowSize(_window, &w, &h);
+			if (w > 0 && h > 0)
+					glfwSetCursorPos(_window, w / 2.0, h / 2.0);
+			// If mouse capture is enabled by default, disable the cursor now
+			if (mouseCaptureToggle)
+					glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		}
+		// glfwSwapInterval(0);
 		return 1;
 	}
 
@@ -291,7 +305,7 @@ namespace psys
 		if (action == GLFW_PRESS && ((key == GLFW_KEY_M || key == GLFW_KEY_SEMICOLON) && m.intensity))
 			m.intensity = 0.0f;
 		else if (action == GLFW_PRESS && ((key == GLFW_KEY_M || key == GLFW_KEY_SEMICOLON) && !m.intensity))
-			m.intensity = 10.0f;
+			m.intensity = 5.0f;
 		if (action == GLFW_PRESS && key == GLFW_KEY_KP_0)
 		{
 			reset_shape = particleShape::CUBE;
@@ -353,44 +367,33 @@ namespace psys
 		{
 			glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			camera.updateMousePos(x, y);
+			firstMouseInput = true;
 			return ;
 		}
-		static bool firstMouse = true;
-		static double lastX = 0, lastY = 0;
-
-		// Get the current window size dynamically
-		int windowWidth, windowHeight;
-		glfwGetWindowSize(_window, &windowWidth, &windowHeight);
 		glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-		camera.updateMousePos(x, y);
-
-		int windowCenterX = windowWidth / 2;
-		int windowCenterY = windowHeight / 2;
-
-		if (firstMouse || ignoreMouseEvent)
+		// Initialize tracking on the first captured event to avoid a big jump
+		if (firstMouseInput)
 		{
-			lastX = windowCenterX;
-			lastY = windowCenterY;
-			firstMouse = false;
-			ignoreMouseEvent = false;
+			lastMouseX = x;
+			lastMouseY = y;
+			firstMouseInput = false;
+			camera.updateMousePos(x, y);
 			return;
 		}
 
-		float xOffset = lastX - x;
-		float yOffset = lastY - y;
-
-		lastX = x;
-		lastY = y;
+		const double rawX = x - lastMouseX;
+		const double rawY = y - lastMouseY;
+		lastMouseX = x;
+		lastMouseY = y;
 
 		float sensitivity = 0.05f;
-		xOffset *= sensitivity;
-		yOffset *= sensitivity;
+		float xOffset = -static_cast<float>(rawX) * sensitivity;
+		float yOffset = -static_cast<float>(rawY) * sensitivity;
 
+		camera.updateMousePos(x, y);
 		camera.rotate(1.0f, 0.0f, xOffset * ROTATION_SPEED);
 		camera.rotate(0.0f, 1.0f, yOffset * ROTATION_SPEED);
-		ignoreMouseEvent = true;
-		glfwSetCursorPos(_window, windowCenterX, windowCenterY);
 	}
 
 	void particle_system::mouseCallback(GLFWwindow* window, double x, double y)
@@ -442,12 +445,15 @@ namespace psys
 		bzero(keyStates, sizeof(keyStates));
 		ignoreMouseEvent	= IGNORE_MOUSE;
 		mouseCaptureToggle	= CAPTURE_MOUSE;
+		firstMouseInput		= true;
+		lastMouseX			= 0.0;
+		lastMouseY			= 0.0;
 
 		// FPS counter
 		frameCount			= 0;
 		lastFrameTime		= 0.0;
 		currentFrameTime	= 0.0;
-		fps					= 0.0;
+		fps					= 0;
 
 		// Player data
 		moveSpeed		= 0.0;
@@ -513,34 +519,45 @@ namespace psys
 	cl_event particle_system::enqueueUpdateParticles() {
 		cl_int err;
 		cl_event kernel_event;
+
 		err = clSetKernelArg(calculate_position, 0, sizeof(cl_mem), &particleBufferCL);
 		if (err != CL_SUCCESS) {
-			std::cerr << "Failed to set args 0 for OpenCL: "<<err<< std::endl;
+			std::cerr << "Failed to set args 0 for OpenCL: " << err << std::endl;
 			return 0;
 		}
+
 		err = clSetKernelArg(calculate_position, 1, sizeof(mass), &m);
 		if (err != CL_SUCCESS) {
-			std::cerr << "Failed to set args 1 for OpenCL: "<<err<< std::endl;
+			std::cerr << "Failed to set args 1 for OpenCL: " << err << std::endl;
+			return 0;
+		}
+
+		err = clSetKernelArg(calculate_position, 2, sizeof(float), &delta);
+		if (err != CL_SUCCESS) {
+			std::cerr << "Failed to set args 2 (deltaTime) for OpenCL: " << err << std::endl;
 			return 0;
 		}
 
 		err = clEnqueueAcquireGLObjects(queue, 1, &particleBufferCL, 0, nullptr, nullptr);
 		if (err != CL_SUCCESS) {
-			std::cerr << "Failed to acquire GL objects for OpenCL: "<<err<< std::endl;
+			std::cerr << "Failed to acquire GL objects for OpenCL: " << err << std::endl;
 			return 0;
 		}
 		clFinish(queue);
+
 		err = clEnqueueNDRangeKernel(queue, calculate_position, 1, NULL, &nb_particles, NULL, 0, NULL, &kernel_event);
 		if (err != CL_SUCCESS) {
-			std::cerr << "Failed to enqueue kernel for OpenCL: "<<err<< std::endl;
+			std::cerr << "Failed to enqueue kernel for OpenCL: " << err << std::endl;
 			return 0;
 		}
+
 		err = clEnqueueReleaseGLObjects(queue, 1, &particleBufferCL, 0, nullptr, nullptr);
 		if (err != CL_SUCCESS) {
-			std::cerr << "Failed to dequeue kernel for OpenCL: "<<err<< std::endl;
+			std::cerr << "Failed to dequeue kernel for OpenCL: " << err << std::endl;
 			return 0;
 		}
 		clFinish(queue);
+
 		return kernel_event;
 	}
 

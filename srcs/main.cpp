@@ -31,7 +31,7 @@ int main()
 	std::cout << std::endl;
 	std::cout << "Welcome to particle_system" << std::endl;
 	std::cout << "Press 'H' key to see the list of available commands" << std::endl;
+	std::cout << "Press 'M' to start attracting particles to the mass" << std::endl;
 	particle_sys.run();
-	std::cout << "GL Version: " << glGetString(GL_VERSION) << std::endl;
 	return 0;
 }

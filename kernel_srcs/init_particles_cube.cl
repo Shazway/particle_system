@@ -27,6 +27,7 @@ __kernel void init_particles_cube(__global particle* particles, unsigned int cub
 	particles[id].pos.x = (xIndex / (float)cubeLength) * cubeSize - cubeSize / 2.0f;
 	particles[id].pos.y = (yIndex / (float)cubeLength) * cubeSize - cubeSize / 2.0f;
 	particles[id].pos.z = (zIndex / (float)cubeLength) * cubeSize - cubeSize / 2.0f;
+	particles[id].pos_prev = particles[id].pos;
 
 	// Initialize velocity to zero
 	particles[id].velocity.x = 0.0f;
@@ -34,7 +35,7 @@ __kernel void init_particles_cube(__global particle* particles, unsigned int cub
 	particles[id].velocity.z = 0.0f;
 
 	// Initialize white particles
-	particles[id].color.r = 0.0f;
-	particles[id].color.g = 0.0f;
-	particles[id].color.b = 0.0f;
+	particles[id].color.r = 1.0f;
+	particles[id].color.g = 1.0f;
+	particles[id].color.b = 1.0f;
 }

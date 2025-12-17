@@ -24,10 +24,11 @@ typedef struct {
 	float radius;
 } mass;
 
-__kernel void updateParticles(__global particle *particles, mass m) {
+__kernel void updateParticles(__global particle *particles, mass m, float deltaTime) {
 	int id = get_global_id(0);
-	const float deltaTime = 0.008f;
-	const float decayFactor = 0.995f;
+	// Exponential damping scaled by real deltaTime so it remains frame-rate independent.
+	// decayRate is chosen so that exp(-decayRate * (1/60)) ~= 0.995f (old per-frame factor at 60 FPS).
+	const float decayRate = 0.30075f;
 	particle p = particles[id];
 
 	// Save the current position as the previous one for trailing
@@ -79,9 +80,10 @@ __kernel void updateParticles(__global particle *particles, mass m) {
 
 
 	// Slowing down particles so they don't go too far away
-	particles[id].velocity.x *= decayFactor;
-	particles[id].velocity.y *= decayFactor;
-	particles[id].velocity.z *= decayFactor;
+	const float damping = exp(-decayRate * deltaTime);
+	particles[id].velocity.x *= damping;
+	particles[id].velocity.y *= damping;
+	particles[id].velocity.z *= damping;
 
 	// Update the position based on the updated velocity
 	particles[id].pos.x += particles[id].velocity.x * deltaTime;
@@ -92,6 +94,7 @@ __kernel void updateParticles(__global particle *particles, mass m) {
 	float normalizedDist = (distance / m.radius) / 2.0f;
 	float totalVelocity = particles[id].velocity.x + particles[id].velocity.y + particles[id].velocity.z;
 	float normalizedVelocity =  totalVelocity / 2.0f;
+
 	// Update colors based on distance to the mass point
 	particles[id].color.r = clamp(normalizedVelocity - normalizedDist, 0.0f, 1.0f);
 	particles[id].color.g = clamp((normalizedDist + normalizedVelocity) * 0.3f, 0.0f, 1.0f);
