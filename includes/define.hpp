@@ -10,6 +10,10 @@
 # define ROTATION_SPEED 1.0f
 # define MOVEMENT_SPEED 20.0f
 
+// Trailing config
+# define TRAIL_SAMPLES 16
+# define TRAIL_INTERVAL 0.07f // ~1 second of history
+
 # define COMMANDS_LIST														\
 	"Controls:\n"															\
 	"'H': Display commands\n"												\
@@ -40,6 +44,6 @@
 	"'L': Decrease Z rotation angle for particles\n"						\
 	"'T': Reset rotation angle to default (0, 1, 0)\n"						\
 	"'F': Toggle mass follow on cursor (follows screen center if mouse control is active)\n"	\
-	"'P': Toggle mass visibility on screen (white sphere)\n"
-
+	"'P': Toggle mass visibility on screen (white sphere)\n"				\
+	"'R': Toggle trailing mode (draws ~1 second particle paths)\n"
 

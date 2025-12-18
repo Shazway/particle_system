@@ -1,3 +1,5 @@
+#define TRAIL_SAMPLES 16
+
 typedef struct {
 	float x, y, z;
 } vec3;
@@ -11,6 +13,9 @@ typedef struct {
 	vec3 velocity;
 	color color;
 	vec3 pos_prev;
+	vec3 trail[TRAIL_SAMPLES];
+	float trail_timer;
+	float trail_head;
 } particle;
 
 float fract(float value) {
@@ -44,4 +49,10 @@ __kernel void init_particles_sphere(__global particle* particles, float radius) 
 	particles[id].color.r = 1.0f;
 	particles[id].color.g = 1.0f;
 	particles[id].color.b = 1.0f;
+
+	for (int i = 0; i < TRAIL_SAMPLES; ++i) {
+		particles[id].trail[i] = particles[id].pos;
+	}
+	particles[id].trail_timer = 0.0f;
+	particles[id].trail_head = 0.0f;
 }

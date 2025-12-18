@@ -15,7 +15,7 @@
 
 namespace psys
 {
-	particle_system::particle_system(const size_t &nbParticles) : nb_particles(nbParticles)
+	particle_system::particle_system(const size_t &nbParticles) : nb_particles(nbParticles), default_nb_particles(nbParticles)
 	{
 		std::cout << "Starting particle system with: " << nb_particles << " particles" << std::endl;
 
@@ -140,6 +140,27 @@ namespace psys
 		glm::mat4 viewProj = projectionMatrix * viewMatrix;
 		GLint vpLoc = glGetUniformLocation(activeShader, "u_viewProj");
 		glUniformMatrix4fv(vpLoc, 1, GL_FALSE, glm::value_ptr(viewProj));
+
+		// Trail mode uniforms/SSBO binding (ignored by shaders that don't declare them)
+		if (!spaghettiMode)
+		{
+			const GLint strideFloats = sizeof(particle) / sizeof(float);
+			const GLint trailOffset = static_cast<GLint>(offsetof(particle, trail) / sizeof(float));
+			const GLint trailHeadOffset = static_cast<GLint>(offsetof(particle, trail_head) / sizeof(float));
+
+			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particleBufferGL);
+
+			if (GLint loc = glGetUniformLocation(activeShader, "u_trailMode"); loc != -1)
+				glUniform1i(loc, trailingMode ? 1 : 0);
+			if (GLint loc = glGetUniformLocation(activeShader, "u_trailSamples"); loc != -1)
+				glUniform1i(loc, TRAIL_SAMPLES);
+			if (GLint loc = glGetUniformLocation(activeShader, "u_particleStride"); loc != -1)
+				glUniform1i(loc, strideFloats);
+			if (GLint loc = glGetUniformLocation(activeShader, "u_trailOffset"); loc != -1)
+				glUniform1i(loc, trailOffset);
+			if (GLint loc = glGetUniformLocation(activeShader, "u_trailHeadOffset"); loc != -1)
+				glUniform1i(loc, trailHeadOffset);
+		}
 
 		// Bind the VAO
 		glBindVertexArray(vao);
@@ -296,6 +317,7 @@ namespace psys
 	{
 		(void)scancode;
 		(void)mods;
+		const size_t reduced_particle_count = 100000;
 
 		if (action == GLFW_PRESS)
 			keyStates[key] = true;
@@ -322,6 +344,21 @@ namespace psys
 			massFollow = !massFollow;
 		else if (action == GLFW_PRESS && key == GLFW_KEY_P)
 			massDisplay = !massDisplay;
+		else if (action == GLFW_PRESS && key == GLFW_KEY_R)
+		{
+			if (trailingMode)
+			{
+				trailingMode = false;
+				if (!spaghettiMode)
+					setParticleCount(default_nb_particles);
+			}
+			else
+			{
+				trailingMode = true;
+				spaghettiMode = false;
+				setParticleCount(std::min(default_nb_particles, reduced_particle_count));
+			}
+		}
 		else if (action == GLFW_PRESS && key == GLFW_KEY_H)
 			std::cout << COMMANDS_LIST << std::endl;
 		else if (action == GLFW_PRESS && key == GLFW_KEY_C)
@@ -329,7 +366,20 @@ namespace psys
 		else if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
 			glfwSetWindowShouldClose(_window, GL_TRUE);
 		else if (action == GLFW_PRESS && key == GLFW_KEY_G)
-			spaghettiMode = !spaghettiMode;
+		{
+			if (spaghettiMode)
+			{
+				spaghettiMode = false;
+				if (!trailingMode)
+					setParticleCount(default_nb_particles);
+			}
+			else
+			{
+				spaghettiMode = true;
+				trailingMode = false;
+				setParticleCount(std::min(default_nb_particles, reduced_particle_count));
+			}
+		}
 	}
 
 	void particle_system::keyPress(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -440,6 +490,7 @@ namespace psys
 		massFollow = false;
 		spaghettiMode = false;
 		massDisplay = true;
+		trailingMode = false;
 
 		// Keys states and runtime booleans()
 		bzero(keyStates, sizeof(keyStates));
@@ -467,6 +518,15 @@ namespace psys
 	{
 		windowWidth = width;
 		windowHeight = height;
+	}
+
+	void particle_system::setParticleCount(size_t newCount)
+	{
+		size_t capped = std::min(newCount, default_nb_particles);
+		if (capped == nb_particles)
+			return;
+		nb_particles = capped;
+		std::cout << "Active particle count set to: " << nb_particles << std::endl;
 	}
 
 	/*

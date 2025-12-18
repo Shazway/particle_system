@@ -24,6 +24,7 @@
 #include <map>
 #include <string>
 #include <array>
+#include <cstddef>
 #include <limits>
 #include <memory>
 #include <cmath>
@@ -98,6 +99,9 @@ namespace psys {
 		float3 velocity;
 		float3 color;
 		float3 pos_prev;
+		float3 trail[TRAIL_SAMPLES];
+		float trail_timer;
+		float trail_head;
 	};
 
 	struct mass {
@@ -142,6 +146,7 @@ namespace psys {
 			void update_mass_tangent(float x, float y, float z);
 			void update_mass_position(glm::mat4 projectionMatrix, glm::mat4 viewMatrix);
 			void update_window_size(int height, int width);
+			void setParticleCount(size_t newCount);
 
 			//Exit functions
 			bool freeCLdata(bool err, const std::string &err_msg = "");
@@ -200,9 +205,11 @@ namespace psys {
 			bool resetSim;
 			bool massFollow;
 			bool massDisplay;
+			bool trailingMode;
 			bool spaghettiMode;
 			particleShape reset_shape;
 			size_t nb_particles;
+			size_t default_nb_particles;
 			size_t particleBufferSize;
 			mass m;
 

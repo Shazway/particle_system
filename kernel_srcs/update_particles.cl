@@ -1,6 +1,5 @@
-typedef struct {
-	float x, y;
-} vec2;
+#define TRAIL_SAMPLES 16
+#define TRAIL_INTERVAL 0.07f
 
 typedef struct {
 	float x, y, z;
@@ -15,6 +14,9 @@ typedef struct {
 	vec3 velocity;
 	color color;
 	vec3 pos_prev;
+	vec3 trail[TRAIL_SAMPLES];
+	float trail_timer;
+	float trail_head;
 } particle;
 
 typedef struct {
@@ -29,8 +31,6 @@ __kernel void updateParticles(__global particle *particles, mass m, float deltaT
 	// Exponential damping scaled by real deltaTime so it remains frame-rate independent.
 	// decayRate is chosen so that exp(-decayRate * (1/60)) ~= 0.995f (old per-frame factor at 60 FPS).
 	const float decayRate = 0.30075f;
-	particle p = particles[id];
-
 	// Save the current position as the previous one for trailing
 	particles[id].pos_prev = particles[id].pos;
 
@@ -99,4 +99,16 @@ __kernel void updateParticles(__global particle *particles, mass m, float deltaT
 	particles[id].color.r = clamp(normalizedVelocity - normalizedDist, 0.0f, 1.0f);
 	particles[id].color.g = clamp((normalizedDist + normalizedVelocity) * 0.3f, 0.0f, 1.0f);
 	particles[id].color.b = clamp(0.5f * normalizedDist, 0.0f, 1.0f);
+
+	// Trail bookkeeping: sample the path roughly every TRAIL_INTERVAL seconds
+	float accumulator = particles[id].trail_timer + deltaTime;
+	int head = (int)(particles[id].trail_head + 0.5f);
+
+	while (accumulator >= TRAIL_INTERVAL) {
+		particles[id].trail[head] = particles[id].pos;
+		head = (head + 1) % TRAIL_SAMPLES;
+		accumulator -= TRAIL_INTERVAL;
+	}
+	particles[id].trail_timer = accumulator;
+	particles[id].trail_head = (float)head;
 }
