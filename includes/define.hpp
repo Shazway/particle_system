@@ -34,6 +34,7 @@
 	"Mass commands:\n"														\
 	"'M' or ';': Toggle mass activity\n"									\
 	"'Keypad +'/'Keypad -': Increase/Decrease gravitational pull\n"			\
+	"'B': Toggle slow random rotation of gravitational pull\n"				\
 	"'U': Increase X rotation angle for particles\n"						\
 	"'I': Increase Y rotation angle for particles\n"						\
 	"'O': Increase Z rotation angle for particles\n"						\

@@ -30,6 +30,7 @@
 #include <cmath>
 #include <chrono>
 #include <algorithm>
+#include <random>
 #include <GL/glx.h>
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
@@ -166,6 +167,7 @@ namespace psys {
 			void updateParticles();
 			void updateMovement();
 			void findMoveRotationSpeed();
+			void tickRandomMassRotation();
 			void display();
 			void renderParticles(glm::mat4 &viewMatrix);
 			void calculateFps();
@@ -207,11 +209,14 @@ namespace psys {
 			bool massDisplay;
 			bool trailingMode;
 			bool spaghettiMode;
+			bool randomMassRotation;
 			particleShape reset_shape;
 			size_t nb_particles;
 			size_t default_nb_particles;
 			size_t particleBufferSize;
 			mass m;
+			float randomRotationTimer;
+			float nextRandomRotationDelay;
 
 			// Camera and view
 			glm::mat4 projectionMatrix;
@@ -239,6 +244,7 @@ namespace psys {
 			std::chrono::steady_clock::time_point start;
 			std::chrono::steady_clock::time_point end;
 			float delta;
+			std::mt19937 rng;
 	};
 };
 

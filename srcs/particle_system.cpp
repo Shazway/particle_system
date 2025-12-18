@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/12/18 14:29:48 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/12/18 16:13:04 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 
 namespace psys
 {
-	particle_system::particle_system(const size_t &nbParticles) : nb_particles(nbParticles), default_nb_particles(nbParticles)
+	particle_system::particle_system(const size_t &nbParticles) : nb_particles(nbParticles), default_nb_particles(nbParticles), rng(std::random_device{}())
 	{
 		std::cout << "Starting particle system with: " << nb_particles << " particles" << std::endl;
 
@@ -67,6 +67,11 @@ namespace psys
 		// Player data
 		moveSpeed		= 0.0;
 		rotationSpeed	= 0.0;
+
+		// Random mass rotation
+		randomMassRotation = false;
+		randomRotationTimer = 0.0f;
+		nextRandomRotationDelay = 1.0f;
 	}
 
 	void particle_system::run()
@@ -277,7 +282,42 @@ namespace psys
 		if (keyStates[GLFW_KEY_KP_ADD]) m.intensity += 0.1f;
 		if (keyStates[GLFW_KEY_KP_SUBTRACT]) m.intensity -= 0.1f;
 
+		// Optional slow random drift of the mass tangent
+		tickRandomMassRotation();
+
 		display();
+	}
+
+	/*
+		Randomly selects rotation of particles around mass while toggle is active
+		Will also determine the next point in time that it will change
+	*/
+	void particle_system::tickRandomMassRotation()
+	{
+		if (!randomMassRotation)
+			return;
+
+		randomRotationTimer += delta;
+		if (randomRotationTimer < nextRandomRotationDelay)
+			return;
+
+		// Pick next delay to keep motion slow and slightly unpredictable
+		std::uniform_real_distribution<float> delayDist(0.5f, 3.0f);
+		nextRandomRotationDelay = delayDist(rng);
+		randomRotationTimer = 0.0f;
+
+		std::uniform_int_distribution<int> axisDist(0, 2);
+		std::uniform_int_distribution<int> signDist(0, 1);
+
+		float step = signDist(rng) == 0 ? -0.5f : 0.5f;
+		float dx = 0.0f, dy = 0.0f, dz = 0.0f;
+		switch (axisDist(rng))
+		{
+			case 0: dx = step; break;
+			case 1: dy = step; break;
+			default: dz = step; break;
+		}
+		update_mass_tangent(dx, dy, dz);
 	}
 
 	int particle_system::initGLFW()
@@ -309,7 +349,7 @@ namespace psys
 			if (mouseCaptureToggle)
 					glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		}
-		// glfwSwapInterval(0);
+		glfwSwapInterval(0);
 		return 1;
 	}
 
@@ -337,6 +377,13 @@ namespace psys
 		{
 			reset_shape = particleShape::SPHERE;
 			resetSim = true;
+		}
+		else if (action == GLFW_PRESS && key == GLFW_KEY_B)
+		{
+			randomMassRotation = !randomMassRotation;
+			randomRotationTimer = 0.0f;
+			nextRandomRotationDelay = 0.6f;
+			std::cout << "Random mass rotation " << (randomMassRotation ? "enabled" : "disabled") << std::endl;
 		}
 		else if (action == GLFW_PRESS && key == GLFW_KEY_T)
 			m.rotationTangent = {0.0f, 1.0f, 0.0f};
@@ -526,6 +573,11 @@ namespace psys
 		// Player data
 		moveSpeed		= 0.0;
 		rotationSpeed	= 0.0;
+
+		// Random mass rotation
+		randomMassRotation = true;
+		randomRotationTimer = 0.0f;
+		nextRandomRotationDelay = 1.0f;
 	}
 
 	/*

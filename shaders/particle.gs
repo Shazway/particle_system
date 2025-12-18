@@ -33,40 +33,21 @@ void main()
 	vec3	posPrev = vs_out[0].pos_prev;
 	vec3	col = vs_out[0].color;
 
-	// Fast path: legacy short line
+	// Fast path: regular point rendering
 	if (!u_trailMode)
 	{
-		float	dist = distance(posCurr, posPrev);
-		const float eps = 1e-4;
+		// Emit a tiny degenerate line around the current position to rasterize as a point-like dot
+		vec3 offset = vec3(0.0, 0.003, 0.0);
 
-		if (dist < eps)
-		{
-			// tiny line that looks like a dot
-			vec3	offset = vec3(0.0, 0.01, 0.0);
-			float	alphaDot = 0.6;
+		gl_Position = u_viewProj * vec4(posCurr - offset, 1.0);
+		fragColor = vec4(col, 1.0);
+		EmitVertex();
 
-			gl_Position = u_viewProj * vec4(posCurr - offset, 1.0);
-			fragColor = vec4(col, alphaDot);
-			EmitVertex();
+		gl_Position = u_viewProj * vec4(posCurr + offset, 1.0);
+		fragColor = vec4(col, 1.0);
+		EmitVertex();
 
-			gl_Position = u_viewProj * vec4(posCurr + offset, 1.0);
-			fragColor = vec4(col, alphaDot);
-			EmitVertex();
-
-			EndPrimitive();
-		}
-		else
-		{
-			gl_Position = u_viewProj * vec4(posPrev, 1.0);
-			fragColor = vec4(col, 0.4);
-			EmitVertex();
-
-			gl_Position = u_viewProj * vec4(posCurr, 1.0);
-			fragColor = vec4(col, 1.0);
-			EmitVertex();
-
-			EndPrimitive();
-		}
+		EndPrimitive();
 		return;
 	}
 
