@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/12/17 15:56:53 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/12/18 14:24:44 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -394,6 +394,7 @@ namespace psys
 		glViewport(0, 0, width, height);
 		windowHeight = height;
 		windowWidth = width;
+
 		// Apply projection matrix operations
 		glMatrixMode(GL_PROJECTION);
 
@@ -413,6 +414,16 @@ namespace psys
 
 	void particle_system::mouseAction(double x, double y)
 	{
+		// Always recenter when capture is active so movement is relative to screen center
+		const double centerX = windowWidth / 2.0;
+		const double centerY = windowHeight / 2.0;
+
+		if (ignoreMouseEvent)
+		{
+			ignoreMouseEvent = false;
+			return;
+		}
+
 		if (!mouseCaptureToggle)
 		{
 			glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -425,17 +436,17 @@ namespace psys
 		// Initialize tracking on the first captured event to avoid a big jump
 		if (firstMouseInput)
 		{
-			lastMouseX = x;
-			lastMouseY = y;
 			firstMouseInput = false;
-			camera.updateMousePos(x, y);
+			lastMouseX = centerX;
+			lastMouseY = centerY;
+			camera.updateMousePos(centerX, centerY);
+			ignoreMouseEvent = true;
+			glfwSetCursorPos(_window, centerX, centerY);
 			return;
 		}
 
 		const double rawX = x - lastMouseX;
 		const double rawY = y - lastMouseY;
-		lastMouseX = x;
-		lastMouseY = y;
 
 		float sensitivity = 0.05f;
 		float xOffset = -static_cast<float>(rawX) * sensitivity;
@@ -444,6 +455,12 @@ namespace psys
 		camera.updateMousePos(x, y);
 		camera.rotate(1.0f, 0.0f, xOffset * ROTATION_SPEED);
 		camera.rotate(0.0f, 1.0f, yOffset * ROTATION_SPEED);
+
+		// Recenter for the next frame and ignore the synthetic callback
+		lastMouseX = centerX;
+		lastMouseY = centerY;
+		ignoreMouseEvent = true;
+		glfwSetCursorPos(_window, centerX, centerY);
 	}
 
 	void particle_system::mouseCallback(GLFWwindow* window, double x, double y)
@@ -546,9 +563,13 @@ namespace psys
 	*/
 	void particle_system::update_mass_position(glm::mat4 projectionMatrix, glm::mat4 viewMatrix)
 	{
+		// Use the screen center when mouse capture is enabled so "follow" tracks the aiming point
+		float cursorX = mouseCaptureToggle ? windowWidth / 2.0f : camera.mousePos.x;
+		float cursorY = mouseCaptureToggle ? windowHeight / 2.0f : camera.mousePos.y;
+
 		// Normalized Dimension coordinates
-		float xNDC = (2.0f * camera.mousePos.x) / windowWidth - 1.0f;
-		float yNDC = 1.0f - (2.0f * camera.mousePos.y) / windowHeight;
+		float xNDC = (2.0f * cursorX) / windowWidth - 1.0f;
+		float yNDC = 1.0f - (2.0f * cursorY) / windowHeight;
 		float zNDC = 0.75f;
 
 		glm::vec4 mouseClipCoords = glm::vec4(xNDC, yNDC, zNDC, 1.0f);
