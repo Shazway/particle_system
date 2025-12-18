@@ -7,25 +7,23 @@ libglew-dev libx11-dev ocl-icd-opencl-dev opencl-headers libglm-dev
   
 Controls:  
 'H'	: Display commands  
-Camera commands:  
-'Z', 'W'		: Move forward  
-'Q', 'A'		: Move left  
-'S'				: Move back  
-'D'				: Move right  
-' '				: Move up  
-'V'				: Move down  
-'C'				: Toggle mouse control for camera angle  
-(For mouse control it will hide the mouse untill you press C again)  
-(Use the mouse to turn around in the simulation like in a first person shooter)
+  
+Movement & camera commands:  
+'W', 'A', 'S', 'D'	: Move forward / left / back / right  
+'Space', 'Left Shift'	: Move up / down  
+'Left Ctrl'		: Move faster  
+Arrow keys or mouse	: Rotate camera (mouse when capture is on)  
+'C'			: Toggle mouse capture (hides the cursor when active)  
   
 Simulation controls:  
-'0'	: Reset simulation to the cube  
-'1'	: Reset simulation to the sphere  
+'Keypad 0'	: Reset simulation to the cube  
+'Keypad 1'	: Reset simulation to the sphere  
+'R'		: Toggle trailing mode (~1 second particle paths)  
+'G'		: Toggle spaghetti mode (line strip rendering)  
   
 Mass commands:  
-'M'	: Toggle mass activity  
-'+'	: Increase gravitational pull  
-'-'	: Decrease gravitational pull (becomes a push after 0 threshold)  
+'M' or ';'	: Toggle mass activity  
+'Keypad +' / 'Keypad -'	: Increase / decrease gravitational pull  
 'U'	: Increase X rotation angle for particles  
 'I'	: Increase Y rotation angle for particles  
 'O'	: Increase Z rotation angle for particles  
@@ -33,5 +31,8 @@ Mass commands:
 'K'	: Decrease Y rotation angle for particles  
 'L'	: Decrease Z rotation angle for particles  
 'T'	: Reset rotation angle to default x, y, z(0, 1, 0)  
-'F'	: Toggle mass follow on cursor (will follow the center of the screen if mouse control is active) 
+'F'	: Toggle mass follow on cursor (will follow the center of the screen if mouse control is active)  
 'P'	: Toggle mass visibility on screen (white sphere)  
+
+System:  
+'Esc'	: Quit  
