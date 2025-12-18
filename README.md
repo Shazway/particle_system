@@ -24,6 +24,7 @@ Simulation controls:
 Mass commands:  
 'M' or ';'	: Toggle mass activity  
 'Keypad +' / 'Keypad -'	: Increase / decrease gravitational pull  
+'B'	: Toggle slow random rotation of gravitational pull  
 'U'	: Increase X rotation angle for particles  
 'I'	: Increase Y rotation angle for particles  
 'O'	: Increase Z rotation angle for particles  
