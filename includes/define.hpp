@@ -18,24 +18,22 @@
 	"Controls:\n"															\
 	"'H': Display commands\n"												\
 	"\n"																	\
-	"Camera commands:\n"													\
-	"'Z', 'W': Move forward\n"												\
-	"'Q', 'A': Move left\n"													\
-	"'S': Move back\n"														\
-	"'D': Move right\n"														\
-	"' ': Move up\n"														\
-	"'V': Move down\n"														\
-	"'C': Toggle mouse control for camera angle\n"							\
-	"(Mouse control will hide the cursor until 'C' is pressed again)\n"		\
+	"Movement & camera:\n"													\
+	"'W', 'A', 'S', 'D': Move forward/left/back/right\n"					\
+	"'Space', 'Left Shift': Move up/down\n"									\
+	"'Left Ctrl': Move faster\n"											\
+	"Arrow keys or mouse (when captured): Rotate camera\n"					\
+	"'C': Toggle mouse capture (hides the cursor when active)\n"			\
 	"\n"																	\
 	"Simulation controls:\n"												\
-	"'0': Reset simulation to the cube\n"									\
-	"'1': Reset simulation to the sphere\n"									\
+	"'Keypad 0': Reset simulation to the cube\n"							\
+	"'Keypad 1': Reset simulation to the sphere\n"							\
+	"'R': Toggle trailing mode (~1 second particle paths)\n"				\
+	"'G': Toggle spaghetti mode (line strip rendering)\n"					\
 	"\n"																	\
 	"Mass commands:\n"														\
-	"'M': Toggle mass activity\n"											\
-	"'+': Increase gravitational pull\n"									\
-	"'-': Decrease gravitational pull (becomes a push after 0 threshold)\n" \
+	"'M' or ';': Toggle mass activity\n"									\
+	"'Keypad +'/'Keypad -': Increase/Decrease gravitational pull\n"			\
 	"'U': Increase X rotation angle for particles\n"						\
 	"'I': Increase Y rotation angle for particles\n"						\
 	"'O': Increase Z rotation angle for particles\n"						\
@@ -45,5 +43,6 @@
 	"'T': Reset rotation angle to default (0, 1, 0)\n"						\
 	"'F': Toggle mass follow on cursor (follows screen center if mouse control is active)\n"	\
 	"'P': Toggle mass visibility on screen (white sphere)\n"				\
-	"'R': Toggle trailing mode (draws ~1 second particle paths)\n"
-
+	"\n"																	\
+	"System:\n"															\
+	"'Esc': Quit\n"
