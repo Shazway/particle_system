@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/12/18 14:24:44 by tmoragli         ###   ########.fr       */
+/*   Updated: 2025/12/18 14:29:48 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,6 +126,7 @@ namespace psys
 			enqueueUpdateParticles();
 		return ;
 	}
+
 	void particle_system::renderParticles(glm::mat4& viewMatrix)
 	{
 		// Activate shader
@@ -217,7 +218,6 @@ namespace psys
 	{
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glMatrixMode(GL_MODELVIEW);
-		// glClearColor(1.0, 1.0, 1.0, 1.0);
 
 		float radY, radX;
 		radX = camera.getAngles().x * (M_PI / 180.0);

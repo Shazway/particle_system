@@ -31,6 +31,7 @@ __kernel void updateParticles(__global particle *particles, mass m, float deltaT
 	// Exponential damping scaled by real deltaTime so it remains frame-rate independent.
 	// decayRate is chosen so that exp(-decayRate * (1/60)) ~= 0.995f (old per-frame factor at 60 FPS).
 	const float decayRate = 0.30075f;
+
 	// Save the current position as the previous one for trailing
 	particles[id].pos_prev = particles[id].pos;
 
