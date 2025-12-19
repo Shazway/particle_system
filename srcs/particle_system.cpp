@@ -15,7 +15,10 @@
 
 namespace psys
 {
-	particle_system::particle_system(const size_t &nbParticles) : nb_particles(nbParticles), default_nb_particles(nbParticles), rng(std::random_device{}())
+	particle_system::particle_system(const size_t &nbParticles)
+		: windowHeight(W_HEIGHT), windowWidth(W_WIDTH), windowPosX(0), windowPosY(0),
+		windowedWidth(W_WIDTH), windowedHeight(W_HEIGHT), fullscreen(false), _window(nullptr),
+		nb_particles(nbParticles), default_nb_particles(nbParticles), rng(std::random_device{}())
 	{
 		std::cout << "Starting particle system with: " << nb_particles << " particles" << std::endl;
 
@@ -55,8 +58,26 @@ namespace psys
 		lastMouseY			= 0.0;
 
 		// Window size
-		windowHeight	= W_HEIGHT;
-		windowWidth		= W_WIDTH;
+		if (_window)
+		{
+			fullscreen = glfwGetWindowMonitor(_window) != nullptr;
+			if (!fullscreen)
+			{
+				glfwGetWindowPos(_window, &windowPosX, &windowPosY);
+				glfwGetWindowSize(_window, &windowedWidth, &windowedHeight);
+			}
+			glfwGetFramebufferSize(_window, &windowWidth, &windowHeight);
+		}
+		else
+		{
+			windowHeight	= W_HEIGHT;
+			windowWidth		= W_WIDTH;
+			windowedWidth	= W_WIDTH;
+			windowedHeight	= W_HEIGHT;
+			windowPosX		= 0;
+			windowPosY		= 0;
+			fullscreen		= false;
+		}
 
 		// FPS counter
 		frameCount			= 0;
@@ -322,6 +343,18 @@ namespace psys
 
 	int particle_system::initGLFW()
 	{
+		GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+		if (monitor)
+		{
+			const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+			if (mode)
+			{
+				windowWidth = mode->width;
+				windowHeight = mode->height;
+				windowedWidth = windowWidth;
+				windowedHeight = windowHeight;
+			}
+		}
 		_window = glfwCreateWindow(windowWidth, windowHeight, "particle_system | FPS: 0", NULL, NULL);
 		if (!_window)
 		{
@@ -350,6 +383,8 @@ namespace psys
 					glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		}
 		glfwSwapInterval(0);
+		glfwGetWindowPos(_window, &windowPosX, &windowPosY);
+		glfwGetWindowSize(_window, &windowedWidth, &windowedHeight);
 		return 1;
 	}
 
@@ -427,6 +462,8 @@ namespace psys
 				setParticleCount(std::min(default_nb_particles, reduced_particle_count));
 			}
 		}
+		else if (action == GLFW_PRESS && key == GLFW_KEY_F11)
+			toggleFullscreen();
 	}
 
 	void particle_system::keyPress(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -434,6 +471,38 @@ namespace psys
 		particle_system *engine = static_cast<particle_system*>(glfwGetWindowUserPointer(window));
 
 		if (engine) engine->keyAction(key, scancode, action, mods);
+	}
+
+	void particle_system::toggleFullscreen()
+	{
+		if (!_window)
+			return;
+
+		if (!fullscreen)
+		{
+			glfwGetWindowPos(_window, &windowPosX, &windowPosY);
+			glfwGetWindowSize(_window, &windowedWidth, &windowedHeight);
+
+			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode* mode = monitor ? glfwGetVideoMode(monitor) : nullptr;
+			if (!monitor || !mode)
+				return;
+			fullscreen = true;
+			glfwSetWindowMonitor(_window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+			int fbWidth = mode->width;
+			int fbHeight = mode->height;
+			glfwGetFramebufferSize(_window, &fbWidth, &fbHeight);
+			reshapeAction(fbWidth, fbHeight);
+		}
+		else
+		{
+			fullscreen = false;
+			glfwSetWindowMonitor(_window, nullptr, windowPosX, windowPosY, windowedWidth, windowedHeight, 0);
+			int fbWidth = windowedWidth;
+			int fbHeight = windowedHeight;
+			glfwGetFramebufferSize(_window, &fbWidth, &fbHeight);
+			reshapeAction(fbWidth, fbHeight);
+		}
 	}
 
 	void particle_system::reshapeAction(int width, int height)
@@ -544,8 +613,26 @@ namespace psys
 		m.rotationTangent.z = 0.0f;
 
 		// Window data
-		windowHeight = W_HEIGHT;
-		windowWidth = W_WIDTH;
+		if (_window)
+		{
+			fullscreen = glfwGetWindowMonitor(_window) != nullptr;
+			if (!fullscreen)
+			{
+				glfwGetWindowPos(_window, &windowPosX, &windowPosY);
+				glfwGetWindowSize(_window, &windowedWidth, &windowedHeight);
+			}
+			glfwGetFramebufferSize(_window, &windowWidth, &windowHeight);
+		}
+		else
+		{
+			windowHeight = W_HEIGHT;
+			windowWidth = W_WIDTH;
+			windowedWidth = W_WIDTH;
+			windowedHeight = W_HEIGHT;
+			windowPosX = 0;
+			windowPosY = 0;
+			fullscreen = false;
+		}
 
 		// Reset data
 		resetSim = false;

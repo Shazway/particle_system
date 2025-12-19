@@ -139,6 +139,7 @@ namespace psys {
 			const char *get_CL_program(const std::string &path);
 			bool selectDevice();
 
+			void toggleFullscreen();
 			//Runtime functions
 			cl_event enqueueUpdateParticles();
 			bool enqueueInitCubeParticles();
@@ -201,6 +202,11 @@ namespace psys {
 			// Window		
 			int windowHeight;
 			int windowWidth;
+			int windowPosX;
+			int windowPosY;
+			int windowedWidth;
+			int windowedHeight;
+			bool fullscreen;
 			GLFWwindow* _window;
 
 			// Useful simulation

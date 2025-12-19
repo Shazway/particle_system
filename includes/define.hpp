@@ -46,4 +46,5 @@
 	"'P': Toggle mass visibility on screen (white sphere)\n"				\
 	"\n"																	\
 	"System:\n"															\
+	"'F11': Toggle fullscreen\n"											\
 	"'Esc': Quit\n"
