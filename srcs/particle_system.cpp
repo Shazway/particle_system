@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2025/12/18 16:13:04 by tmoragli         ###   ########.fr       */
+/*   Updated: 2026/01/06 16:49:19 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -382,7 +382,7 @@ namespace psys
 			if (mouseCaptureToggle)
 					glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		}
-		glfwSwapInterval(0);
+		// glfwSwapInterval(0);
 		glfwGetWindowPos(_window, &windowPosX, &windowPosY);
 		glfwGetWindowSize(_window, &windowedWidth, &windowedHeight);
 		return 1;
