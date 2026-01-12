@@ -103,6 +103,9 @@ namespace psys {
 		float3 trail[TRAIL_SAMPLES];
 		float trail_timer;
 		float trail_head;
+		float life;
+		float max_life;
+		unsigned int seed;
 	};
 
 	struct mass {
@@ -110,6 +113,17 @@ namespace psys {
 		float3 rotationTangent;
 		float intensity;
 		float radius;
+	};
+
+	struct emitter {
+		float3 pos;
+		float spawn_radius;
+		float push_intensity;
+		float push_radius;
+		float spawn_speed;
+		float life_min;
+		float life_max;
+		unsigned int enabled;
 	};
 
 	enum particleShape {
@@ -147,8 +161,10 @@ namespace psys {
 			void resetSimulation();
 			void update_mass_tangent(float x, float y, float z);
 			void update_mass_position(glm::mat4 projectionMatrix, glm::mat4 viewMatrix);
+			void update_emitter_position(glm::mat4 projectionMatrix, glm::mat4 viewMatrix);
 			void update_window_size(int height, int width);
 			void setParticleCount(size_t newCount);
+			void updateEmitterRange();
 
 			//Exit functions
 			bool freeCLdata(bool err, const std::string &err_msg = "");
@@ -212,6 +228,7 @@ namespace psys {
 			// Useful simulation
 			bool resetSim;
 			bool massFollow;
+			bool emitterFollow;
 			bool massDisplay;
 			bool trailingMode;
 			bool spaghettiMode;
@@ -221,6 +238,11 @@ namespace psys {
 			size_t default_nb_particles;
 			size_t particleBufferSize;
 			mass m;
+			emitter e;
+			size_t emitter_start;
+			size_t emitter_count;
+			bool emitterEnabled;
+			bool emitterDisplay;
 			float randomRotationTimer;
 			float nextRandomRotationDelay;
 

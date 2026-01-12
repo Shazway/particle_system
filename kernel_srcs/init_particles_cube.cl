@@ -16,6 +16,9 @@ typedef struct {
 	vec3 trail[TRAIL_SAMPLES];
 	float trail_timer;
 	float trail_head;
+	float life;
+	float max_life;
+	uint seed;
 } particle;
 
 __kernel void init_particles_cube(__global particle* particles, unsigned int cubeSize) {
@@ -49,4 +52,7 @@ __kernel void init_particles_cube(__global particle* particles, unsigned int cub
 	}
 	particles[id].trail_timer = 0.0f;
 	particles[id].trail_head = 0.0f;
+	particles[id].life = 0.0f;
+	particles[id].max_life = 0.0f;
+	particles[id].seed = (uint)(id * 747796405u + 2891336453u);
 }

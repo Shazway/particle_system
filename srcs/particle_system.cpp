@@ -6,7 +6,7 @@
 /*   By: tmoragli <tmoragli@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/12 15:14:39 by tmoragli          #+#    #+#             */
-/*   Updated: 2026/01/06 16:49:19 by tmoragli         ###   ########.fr       */
+/*   Updated: 2026/01/12 16:44:24 by tmoragli         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -217,6 +217,18 @@ namespace psys
 			gluDeleteQuadric(quad);
 			glPopMatrix();
 		}
+
+		// Render the emitter
+		if (emitterDisplay)
+		{
+			glPushMatrix();
+			glTranslatef(e.pos.x, e.pos.y, e.pos.z);
+			glColor3f(1.0f, 1.0f, 1.0f);
+			GLUquadric* quad = gluNewQuadric();
+			gluSphere(quad, e.spawn_radius, 60, 60);
+			gluDeleteQuadric(quad);
+			glPopMatrix();
+		}
 	}
 	
 
@@ -267,6 +279,8 @@ namespace psys
 		// Update the mass position to the cursor in space
 		if (massFollow)
 			update_mass_position(projectionMatrix, viewMatrix);
+		if (emitterFollow)
+			update_emitter_position(projectionMatrix, viewMatrix);
 
 		// Call update kernel
 		updateParticles();
@@ -424,6 +438,8 @@ namespace psys
 			m.rotationTangent = {0.0f, 1.0f, 0.0f};
 		else if (action == GLFW_PRESS && key == GLFW_KEY_F)
 			massFollow = !massFollow;
+		else if (action == GLFW_PRESS && key == GLFW_KEY_Y)
+			emitterFollow = !emitterFollow;
 		else if (action == GLFW_PRESS && key == GLFW_KEY_P)
 			massDisplay = !massDisplay;
 		else if (action == GLFW_PRESS && key == GLFW_KEY_R)
@@ -445,6 +461,12 @@ namespace psys
 			std::cout << COMMANDS_LIST << std::endl;
 		else if (action == GLFW_PRESS && key == GLFW_KEY_C)
 			mouseCaptureToggle = !mouseCaptureToggle;
+		else if (action == GLFW_PRESS && key == GLFW_KEY_E)
+		{
+			emitterEnabled = !emitterEnabled;
+			e.enabled = emitterEnabled ? 1u : 0u;
+			emitterDisplay = emitterEnabled;
+		}
 		else if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
 			glfwSetWindowShouldClose(_window, GL_TRUE);
 		else if (action == GLFW_PRESS && key == GLFW_KEY_G)
@@ -612,6 +634,19 @@ namespace psys
 		m.rotationTangent.y = 1.0f;
 		m.rotationTangent.z = 0.0f;
 
+		// Emitter defaults
+		e.pos = {-15.0f, 0.0f, -10.0f};
+		e.spawn_radius = 1.5f;
+		e.push_intensity = 35.0f;
+		e.push_radius = 8.0f;
+		e.spawn_speed = 6.0f;
+		e.life_min = 1.5f;
+		e.life_max = 4.0f;
+		e.enabled = 0u;
+		emitterEnabled = false;
+		emitterDisplay = false;
+		updateEmitterRange();
+
 		// Window data
 		if (_window)
 		{
@@ -639,6 +674,7 @@ namespace psys
 
 		// Mass toggles
 		massFollow = false;
+		emitterFollow = false;
 		spaghettiMode = false;
 		massDisplay = true;
 		trailingMode = false;
@@ -682,7 +718,18 @@ namespace psys
 		if (capped == nb_particles)
 			return;
 		nb_particles = capped;
+		updateEmitterRange();
 		std::cout << "Active particle count set to: " << nb_particles << std::endl;
+	}
+
+	void particle_system::updateEmitterRange()
+	{
+		const size_t minEmitter = 1;
+		const size_t target = nb_particles / 20; // 5% of the buffer
+		emitter_count = std::max(minEmitter, target);
+		if (emitter_count > nb_particles)
+			emitter_count = nb_particles;
+		emitter_start = nb_particles - emitter_count;
 	}
 
 	/*
@@ -716,6 +763,24 @@ namespace psys
 		pointingWorldCoords /= pointingWorldCoords.w;
 
 		m.pos = {pointingWorldCoords.x, pointingWorldCoords.y, pointingWorldCoords.z};
+	}
+
+	void particle_system::update_emitter_position(glm::mat4 projectionMatrix, glm::mat4 viewMatrix)
+	{
+		// Use the screen center when mouse capture is enabled so "follow" tracks the aiming point
+		float cursorX = mouseCaptureToggle ? windowWidth / 2.0f : camera.mousePos.x;
+		float cursorY = mouseCaptureToggle ? windowHeight / 2.0f : camera.mousePos.y;
+
+		// Normalized Dimension coordinates
+		float xNDC = (2.0f * cursorX) / windowWidth - 1.0f;
+		float yNDC = 1.0f - (2.0f * cursorY) / windowHeight;
+		float zNDC = 0.75f;
+
+		glm::vec4 mouseClipCoords = glm::vec4(xNDC, yNDC, zNDC, 1.0f);
+		glm::vec4 pointingWorldCoords = glm::inverse(projectionMatrix * viewMatrix) * mouseClipCoords;
+		pointingWorldCoords /= pointingWorldCoords.w;
+
+		e.pos = {pointingWorldCoords.x, pointingWorldCoords.y, pointingWorldCoords.z};
 	}
 
 	/*
@@ -752,9 +817,22 @@ namespace psys
 			return 0;
 		}
 
-		err = clSetKernelArg(calculate_position, 2, sizeof(float), &delta);
+		err = clSetKernelArg(calculate_position, 2, sizeof(emitter), &e);
 		if (err != CL_SUCCESS) {
-			std::cerr << "Failed to set args 2 (deltaTime) for OpenCL: " << err << std::endl;
+			std::cerr << "Failed to set args 2 (emitter) for OpenCL: " << err << std::endl;
+			return 0;
+		}
+
+		err = clSetKernelArg(calculate_position, 3, sizeof(float), &delta);
+		if (err != CL_SUCCESS) {
+			std::cerr << "Failed to set args 3 (deltaTime) for OpenCL: " << err << std::endl;
+			return 0;
+		}
+
+		cl_uint emitterStart = static_cast<cl_uint>(emitter_start);
+		err = clSetKernelArg(calculate_position, 4, sizeof(cl_uint), &emitterStart);
+		if (err != CL_SUCCESS) {
+			std::cerr << "Failed to set args 4 (emitter start) for OpenCL: " << err << std::endl;
 			return 0;
 		}
 
